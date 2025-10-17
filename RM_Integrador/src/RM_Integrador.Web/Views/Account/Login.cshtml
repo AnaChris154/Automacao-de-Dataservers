@@ -1,0 +1,281 @@
+@model RM_Integrador.Web.Models.LoginViewModel
+
+@{
+    ViewData["Title"] = "Login";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 1rem;
+        }
+
+        .user-type-selector {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem;
+        }
+
+        .user-type-option {
+            text-align: center;
+        }
+
+        .user-type-label {
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .user-type-label:hover {
+            background-color: #e9ecef;
+        }
+
+        input[type="radio"]:checked + .user-type-label {
+            background-color: #e2e6ea;
+            font-weight: bold;
+        }
+
+        .emoji-icon {
+            font-size: 1.2rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+        }
+
+        .form-control {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .btn-primary {
+            padding: 0.5rem 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-container">
+                <img src="~/images/totvs-logo.png" alt="TOTVS Logo" class="img-fluid" />
+                <h2 class="text-center">Sistema de Automação DataServer BH</h2>
+            </div>
+
+            <div id="errorMessages" class="alert alert-danger d-none"></div>
+            
+            <!-- Loading indicator -->
+            <div id="loadingIndicator" class="text-center mb-3 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+                <div class="mt-2">
+                    <small id="loadingMessage" class="text-muted">Conectando ao servidor...</small>
+                </div>
+            </div>
+
+            <form id="loginForm" method="post">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="ReturnUrl" value="@ViewBag.ReturnUrl" />
+
+                <div class="user-type-selector">
+                    <div class="user-type-option">
+                        <input type="radio" name="IsAdmin" id="userType-user" value="false" checked />
+                        <label for="userType-user" class="user-type-label">
+                            <span class="emoji-icon">👤</span>
+                            <span>Usuário</span>
+                        </label>
+                    </div>
+                    <div class="user-type-option">
+                        <input type="radio" name="IsAdmin" id="userType-admin" value="true" />
+                        <label for="userType-admin" class="user-type-label">
+                            <span class="emoji-icon">👨‍💼</span>
+                            <span>Administrador</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="BaseUrl">URL do DataServer
+                    (http://localhost:8051/rmsrestdataserver/rest)</label>
+                    <input type="text" class="form-control" id="BaseUrl" name="BaseUrl" required />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="Username">Usuário</label>
+                    <input type="text" class="form-control" id="Username" name="Username" required />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="Password">Senha</label>
+                    <input type="password" class="form-control" id="Password" name="Password" required />
+                </div>
+
+                <button type="submit" id="loginButton" class="btn btn-primary w-100">
+                    <span id="loginButtonText">Entrar no Sistema</span>
+                    <span id="loginButtonSpinner" class="spinner-border spinner-border-sm d-none" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Função para mostrar/esconder loading
+            function showLoading(message = 'Conectando ao servidor...') {
+                $('#loadingIndicator').removeClass('d-none');
+                $('#loadingMessage').text(message);
+                $('#loginButton').prop('disabled', true);
+                $('#loginButtonText').text('Aguarde...');
+                $('#loginButtonSpinner').removeClass('d-none');
+                $('#errorMessages').addClass('d-none');
+            }
+
+            function hideLoading() {
+                $('#loadingIndicator').addClass('d-none');
+                $('#loginButton').prop('disabled', false);
+                $('#loginButtonText').text('Entrar no Sistema');
+                $('#loginButtonSpinner').addClass('d-none');
+            }
+
+            // Função para mostrar mensagem de erro
+            function showError(message) {
+                $('#errorMessages')
+                    .removeClass('d-none')
+                    .text(message);
+            }
+
+            // Simulação de etapas do login para melhor UX
+            function simulateLoginSteps() {
+                let step = 0;
+                const steps = [
+                    'Conectando ao servidor...',
+                    'Validando credenciais...',
+                    'Carregando dados do usuário...',
+                    'Redirecionando...'
+                ];
+
+                const interval = setInterval(function() {
+                    if (step < steps.length - 1) {
+                        $('#loadingMessage').text(steps[step]);
+                        step++;
+                    } else {
+                        clearInterval(interval);
+                    }
+                }, 800);
+
+                return interval;
+            }
+
+            $('#loginForm').on('submit', function (e) {
+                e.preventDefault();
+
+                // Mostrar loading
+                showLoading();
+                
+                // Simular etapas do login
+                const stepsInterval = simulateLoginSteps();
+
+                var formData = new FormData(this);
+
+                console.log('Form data:', Object.fromEntries(formData));
+
+                $.ajax({
+                    url: '/Account/login',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        console.log('Response:', response);
+                        
+                        // Parar simulação das etapas
+                        clearInterval(stepsInterval);
+                        
+                        if (response.success) {
+                            $('#loadingMessage').text('Redirecionando...');
+                            
+                            // Pequeno delay para mostrar mensagem de redirecionamento
+                            setTimeout(function() {
+                                window.location.href = response.redirectUrl;
+                            }, 500);
+                        } else {
+                            hideLoading();
+                            showError(response.message || 'Erro ao realizar login');
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Erro:', xhr.responseText);
+                        
+                        // Parar simulação das etapas
+                        clearInterval(stepsInterval);
+                        hideLoading();
+                        
+                        let errorMessage = 'Erro ao realizar login';
+                        if (xhr.responseJSON?.message) {
+                            errorMessage += ': ' + xhr.responseJSON.message;
+                        } else if (xhr.status === 0) {
+                            errorMessage = 'Não foi possível conectar ao servidor. Verifique a URL do DataServer.';
+                        } else if (xhr.status >= 500) {
+                            errorMessage = 'Erro interno do servidor. Tente novamente em alguns momentos.';
+                        } else if (xhr.status === 401) {
+                            errorMessage = 'Credenciais inválidas. Verifique seu usuário e senha.';
+                        } else {
+                            errorMessage += ': ' + error;
+                        }
+                        
+                        showError(errorMessage);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

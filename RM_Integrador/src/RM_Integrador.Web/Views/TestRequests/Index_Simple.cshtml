@@ -1,0 +1,547 @@
+@{
+    ViewData["Title"] = "Teste de Requisições";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Requisições - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/spinner.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .json-display {
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .loading-text {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* Success/Error messages */
+        .alert {
+            position: relative;
+            z-index: 2;
+            padding: 0.75rem 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/User/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <h2>Teste de Requisições para DataServers</h2>
+    
+    <!-- Alert container for success/error messages -->
+    <div id="alert-container"></div>
+
+    <!-- Loading indicator -->
+    <div id="loading-container" class="text-center" style="display: none;">
+        <div class="spinner request-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+        <div class="loading-text">Processando requisição...</div>
+    </div>
+
+    <!-- Status da conexão RM -->
+    <div id="rm-connection-status" class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Detectando RM local...
+    </div>
+
+    <!-- Informações de Ambiente -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-server"></i> Informações do Ambiente</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Ambiente:</strong> <span id="env-environment" class="badge bg-secondary">Carregando...</span></p>
+                    <p><strong>RM Local Disponível:</strong> <span id="env-local-rm">-</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>URL Atual do RM:</strong> <br><small id="env-current-url" class="text-break">-</small></p>
+                    <p><strong>Portas Disponíveis:</strong> <span id="env-ports">-</span></p>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="/Environment" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-cog"></i> Configurações Avançadas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configurações de Execução -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-cogs"></i> Configurações de Execução</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Modo de Execução:</label>
+                    <select id="executionMode" class="form-select">
+                        <option value="auto">🔄 Automático (Detectar melhor opção)</option>
+                        <option value="local">🏠 Forçar RM Local</option>
+                        <option value="server">🌐 Apenas Servidor</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Ações:</label>
+                    <div class="d-flex gap-2">
+                        <button id="redetectRMBtn" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-sync"></i> Re-detectar RM
+                        </button>
+                        <button id="showRMStatusBtn" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-info"></i> Status
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#rmCredentialsModal">
+                            <i class="fas fa-key"></i> Credenciais
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataServer Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-database"></i> Seleção do DataServer</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group">
+                <input type="text" id="dataServerInput" class="form-control" placeholder="Nome do DataServer">
+                <button id="selectDataServerBtn" class="btn btn-primary" type="button">Buscar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataServer Info -->
+    <div id="dataServerInfo" style="display: none;" class="alert alert-success">
+        <!-- Informações do DataServer serão exibidas aqui -->
+    </div>
+
+    <!-- Operation Type Selection -->
+    <div id="operationTypeSection" style="display: none;" class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-tools"></i> Tipo de Operação</h5>
+        </div>
+        <div class="card-body">
+            <p>Escolha o tipo de operação para o DataServer selecionado:</p>
+            <div class="d-flex gap-3">
+                <button id="showGetOptionsBtn" class="btn btn-info btn-lg">
+                    <i class="fas fa-download me-2"></i> GET - Consultar Dados
+                </button>
+                <button id="showPostOptionsBtn" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload me-2"></i> POST - Enviar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations Section -->
+    <div id="operationsSection" style="display: none;">
+        <!-- GET Options -->
+        <div id="getOptions" style="display: none;" class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Configurações GET</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="getFilter" class="form-label">Filtro (opcional):</label>
+                    <input type="text" id="getFilter" class="form-control" placeholder="Ex: id=123 ou name=teste">
+                </div>
+                <button class="btn btn-info" onclick="executeGet()">Executar GET</button>
+            </div>
+        </div>
+
+        <!-- POST Options -->
+        <div id="postOptions" style="display: none;" class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Configurações POST</h5>
+            </div>
+            <div class="card-body">
+                <p>Escolha como deseja preparar os dados para envio:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="preparePost()">📋 Preparar JSON</button>
+                </div>
+                <small class="text-muted">Use o modo "Preparar JSON" para construir o JSON de forma assistida.</small>
+            </div>
+        </div>
+
+        <!-- JSON Preparation Area -->
+        <div id="jsonPreparationArea" style="display: none;" class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-code"></i> Preparação do JSON</h5>
+                <div>
+                    <button class="btn btn-success" onclick="sendPreparedJson()">
+                        <i class="fas fa-paper-plane"></i> Enviar JSON
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="formatJsonInTextarea()">
+                        <i class="fas fa-magic"></i> Formatar
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="goBackToKeys()">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="json-inputs-container">
+                    <!-- Inputs de chaves serão gerados aqui -->
+                </div>
+                <div class="mt-3">
+                    <label for="prepared-json" class="form-label">JSON Final:</label>
+                    <textarea id="prepared-json" class="form-control" rows="10" placeholder="O JSON preparado aparecerá aqui..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultSection" style="display: none;" class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5><i class="fas fa-chart-line"></i> Resultado da Requisição</h5>
+            <div>
+                <button class="btn btn-outline-primary" onclick="backToMain()">
+                    <i class="fas fa-home"></i> Nova Consulta
+                </button>
+                <button class="btn btn-outline-secondary" onclick="saveResult()">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="result" class="json-display border p-3 bg-light">
+                <!-- Resultado será exibido aqui -->
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Modal para Configuração de Credenciais RM Local -->
+    <div class="modal fade" id="rmCredentialsModal" tabindex="-1" aria-labelledby="rmCredentialsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rmCredentialsModalLabel">
+                        <i class="fas fa-key"></i> Configurar Credenciais RM Local
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rmUsername" class="form-label">Usuário:</label>
+                        <input type="text" class="form-control" id="rmUsername" placeholder="Nome de usuário do RM">
+                    </div>
+                    <div class="mb-3">
+                        <label for="rmPassword" class="form-label">Senha:</label>
+                        <input type="password" class="form-control" id="rmPassword" placeholder="Senha do RM">
+                    </div>
+                    <div class="mb-3">
+                        <label for="rmCodColigada" class="form-label">Código da Coligada:</label>
+                        <input type="number" class="form-control" id="rmCodColigada" value="1" min="1">
+                    </div>
+                    <div class="text-end mb-3">
+                        <button type="button" class="btn btn-outline-primary" onclick="testRMCredentials()">
+                            <i class="fas fa-check"></i> Testar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearRMCredentials()">
+                            <i class="fas fa-trash"></i> Limpar
+                        </button>
+                    </div>
+                    <div id="credentialsTestResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRMCredentials()">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Função para mostrar alertas
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alert-container');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" onclick="closeAlert('${alertId}')"></button>
+                </div>
+            `;
+            
+            alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-remove após 5 segundos
+            setTimeout(() => {
+                closeAlert(alertId);
+            }, 5000);
+        }
+
+        // Função para fechar alertas
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.remove();
+            }
+        }
+
+        // Função para carregar informações do ambiente
+        async function loadEnvironmentInfo() {
+            try {
+                const response = await fetch('/TestRequests/GetEnvironmentInfo');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const info = data.data;
+                    document.getElementById('env-environment').textContent = info.environment || 'Desenvolvimento';
+                    document.getElementById('env-local-rm').textContent = info.hasLocalRM ? 'Sim' : 'Não';
+                    document.getElementById('env-current-url').textContent = info.currentRMUrl || 'Não detectado';
+                    document.getElementById('env-ports').textContent = info.availablePorts?.join(', ') || 'Nenhuma';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar informações do ambiente:', error);
+            }
+        }
+
+        // Função para detectar RM local/remoto
+        async function redetectRM() {
+            const statusElement = document.getElementById('rm-connection-status');
+            statusElement.className = 'alert alert-info';
+            statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detectando RM...';
+            
+            try {
+                const response = await fetch('/TestRequests/DetectRM');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const rmInfo = data.data;
+                    let statusClass = 'alert-success';
+                    let icon = 'fas fa-check-circle';
+                    let message = '';
+                    
+                    if (rmInfo.isLocal) {
+                        message = `<i class="${icon}"></i> RM Local detectado na porta ${rmInfo.port}`;
+                    } else {
+                        message = `<i class="${icon}"></i> Usando RM Remoto: ${rmInfo.remoteUrl}`;
+                    }
+                    
+                    statusElement.className = `alert ${statusClass}`;
+                    statusElement.innerHTML = message;
+                    
+                    // Atualiza informações do ambiente
+                    if (rmInfo.isLocal !== undefined) {
+                        document.getElementById('env-local-rm').textContent = rmInfo.isLocal ? 'Sim' : 'Não';
+                    }
+                } else {
+                    statusElement.className = 'alert alert-warning';
+                    statusElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.message}`;
+                }
+            } catch (error) {
+                statusElement.className = 'alert alert-danger';
+                statusElement.innerHTML = '<i class="fas fa-times-circle"></i> Erro ao detectar RM: ' + error.message;
+            }
+        }
+
+        function showRMStatus() {
+            // Implementar lógica para mostrar status detalhado do RM
+            alert('Função de status do RM será implementada');
+        }
+
+        // Função para selecionar DataServer
+        async function selectDataServer() {
+            const term = document.getElementById('dataServerInput').value;
+            if (!term || term.trim() === '') {
+                alert('Digite o nome do DataServer');
+                return;
+            }
+            
+            console.log('Buscando DataServer:', term);
+            
+            try {
+                const response = await fetch(`/User/BuscarJsonsExemplos?dataServerName=${encodeURIComponent(term)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('DataServer encontrado:', data.data);
+                    
+                    // Exibe informações do DataServer
+                    const infoDiv = document.getElementById('dataServerInfo');
+                    infoDiv.innerHTML = `
+                        <strong>DataServer encontrado:</strong> ${term}<br>
+                        <small>Clique em uma das opções abaixo para continuar.</small>
+                    `;
+                    infoDiv.style.display = 'block';
+                    
+                    // Mostra as opções de operação
+                    document.getElementById('operationTypeSection').style.display = 'block';
+                    
+                    // Armazena os dados para uso posterior
+                    window.selectedDataServer = data.data;
+                    
+                    alert('DataServer encontrado com sucesso!');
+                } else {
+                    alert(data.message || 'DataServer não encontrado');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar DataServer:', error);
+                alert('Erro ao buscar DataServer: ' + error.message);
+            }
+        }
+
+        // Função para mostrar opções GET
+        function showGetOptions() {
+            console.log('Mostrando opções GET');
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            document.getElementById('operationsSection').style.display = 'block';
+            document.getElementById('getOptions').style.display = 'block';
+            document.getElementById('postOptions').style.display = 'none';
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+        }
+
+        // Função para mostrar opções POST
+        function showPostOptions() {
+            console.log('Mostrando opções POST');
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            document.getElementById('operationsSection').style.display = 'block';
+            document.getElementById('getOptions').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+        }
+
+        // Função para executar GET
+        async function executeGet() {
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            const filter = document.getElementById('getFilter').value;
+            
+            try {
+                document.getElementById('loading-container').style.display = 'block';
+                
+                const response = await fetch(`/User/TesteGET?dataServerName=${encodeURIComponent(window.selectedDataServer.name)}&filter=${encodeURIComponent(filter)}`);
+                const data = await response.json();
+                
+                document.getElementById('loading-container').style.display = 'none';
+                
+                if (data.success) {
+                    document.getElementById('resultSection').style.display = 'block';
+                    document.getElementById('result').innerHTML = `<pre>${JSON.stringify(data.data, null, 2)}</pre>`;
+                    showAlert('Requisição GET executada com sucesso!', 'success');
+                } else {
+                    showAlert('Erro na requisição GET: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                document.getElementById('loading-container').style.display = 'none';
+                showAlert('Erro na requisição GET: ' + error.message, 'danger');
+            }
+        }
+
+        // Função para preparar POST (nova funcionalidade)
+        function preparePost() {
+            console.log('Preparando POST...');
+            document.getElementById('postOptions').style.display = 'none';
+            document.getElementById('jsonPreparationArea').style.display = 'block';
+            
+            // Aqui você pode adicionar lógica para carregar chaves disponíveis
+            generateJsonKeyInputs();
+        }
+
+        // Funções para credenciais RM
+        function testRMCredentials() {
+            showAlert('Teste de credenciais RM (simulado)', 'info');
+        }
+
+        function clearRMCredentials() {
+            document.getElementById('rmUsername').value = '';
+            document.getElementById('rmPassword').value = '';
+            document.getElementById('rmCodColigada').value = '1';
+            showAlert('Credenciais removidas', 'info');
+        }
+
+        function saveRMCredentials() {
+            showAlert('Credenciais salvas com sucesso!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rmCredentialsModal'));
+            if (modal) modal.hide();
+        }
+
+        // Outras funções simplificadas...
+        function generateJsonKeyInputs() {
+            const container = document.getElementById('json-inputs-container');
+            container.innerHTML = '<p>Área de preparação JSON - implementação simplificada</p>';
+        }
+
+        function sendPreparedJson() {
+            showAlert('Função POST será implementada', 'info');
+        }
+
+        function formatJsonInTextarea() {
+            showAlert('Formatação JSON', 'info');
+        }
+
+        function goBackToKeys() {
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+        }
+
+        function backToMain() {
+            location.reload();
+        }
+
+        function saveResult() {
+            showAlert('Resultado salvo (simulado)', 'success');
+        }
+
+        // Inicialização
+        $(document).ready(function() {
+            // Configura event listeners dos botões
+            document.getElementById('redetectRMBtn').addEventListener('click', redetectRM);
+            document.getElementById('showRMStatusBtn').addEventListener('click', showRMStatus);
+            document.getElementById('selectDataServerBtn').addEventListener('click', selectDataServer);
+            document.getElementById('showGetOptionsBtn').addEventListener('click', showGetOptions);
+            document.getElementById('showPostOptionsBtn').addEventListener('click', showPostOptions);
+            
+            // Executa a inicialização das funções
+            setTimeout(async () => {
+                await loadEnvironmentInfo();
+                await redetectRM();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

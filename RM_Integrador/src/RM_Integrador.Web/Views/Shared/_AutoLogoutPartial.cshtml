@@ -1,0 +1,35 @@
+<script>
+    // Configuração do tempo de inatividade
+    const timeoutMinutes = 1;
+    let logoutTimeout;
+    let warningShown = false;
+
+    function resetLogoutTimer() {
+        clearTimeout(logoutTimeout);
+        warningShown = false;
+        
+        logoutTimeout = setTimeout(() => {
+            if (!warningShown) {
+                warningShown = true;
+                const stayLoggedIn = confirm('Sua sessão irá expirar em alguns segundos. Deseja continuar conectado?');
+                
+                if (stayLoggedIn) {
+                    resetLogoutTimer();
+                    console.log('Sessão renovada pelo usuário');
+                } else {
+                    console.log('Logout automático iniciando...');
+                    window.location.href = '/Account/Logout';
+                }
+            }
+        }, timeoutMinutes * 60 * 1000);
+    }
+
+    // Eventos que renovam o timer
+    ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetLogoutTimer, true);
+    });
+
+    // Inicia o timer quando a página carrega
+    resetLogoutTimer();
+    console.log('AutoLogout ativado - Timer: ' + timeoutMinutes + ' minuto(s)');
+</script>

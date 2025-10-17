@@ -1,0 +1,489 @@
+@{
+    ViewData["Title"] = "Comparar JSONs";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comparar JSONs - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .json-display {
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+        }
+        .diff-missing {
+            color: #dc3545;
+            padding: 2px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+        .diff-type {
+            color: #ffc107;
+            padding: 2px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+        .diff-extra {
+            color: #0dcaf0;
+            padding: 2px;
+            margin: 2px 0;
+            border-radius: 3px;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @@keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* Success/Error messages */
+        .alert-dismissible {
+            position: relative;
+            padding-right: 4rem;
+        }
+
+        .alert-dismissible .btn-close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 2;
+            padding: 0.75rem 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/User/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <h2>Comparar JSONs</h2>
+
+        <!-- Alert container for success/error messages -->
+        <div id="alert-container"></div>
+
+        <!-- Loading indicator -->
+        <div id="loading-container" class="text-center" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Processando...</div>
+        </div>
+
+        <!-- Área de Busca -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="input-group">
+                    <input type="text" id="dataServerInput" class="form-control" placeholder="Nome do DataServer">
+                    <button class="btn btn-primary" onclick="searchDataServer()">Buscar DataServer</button>
+                </div>
+                <div id="dataServerInfo" class="alert alert-info mt-3" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Área do JSON do Usuário -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Seu JSON</h5>
+                <textarea id="userJson" class="form-control mb-3" rows="10" placeholder="Cole seu JSON aqui"></textarea>
+                <button class="btn btn-success" onclick="compareJson()">Comparar JSON</button>
+            </div>
+        </div>
+
+        <!-- Área de Resultados -->
+        <div id="resultsArea" style="display: none;">
+            <!-- Diferenças -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Diferenças Encontradas</h5>
+                    <div id="differencesArea"></div>
+                </div>
+            </div>
+
+            <!-- JSONs -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">JSON Exemplo</h5>
+                            <pre id="exampleJson" class="json-display"></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">JSON Corrigido</h5>
+                            <div class="mb-2 d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary" onclick="toggleJsonEdit()">
+                                    <span id="editButtonText">Editar JSON</span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" onclick="executePost()">
+                                    Executar POST
+                                </button>
+                            </div>
+                            <!-- Área de visualização -->
+                            <pre id="correctedJson" class="json-display" style="display: block;"></pre>
+                            <!-- Área de edição -->
+                            <textarea id="correctedJsonEdit" 
+                                     class="form-control json-display" 
+                                     style="display: none; min-height: 300px; font-family: 'Consolas', monospace;">
+                            </textarea>
+                            <div class="mt-3">
+                                <button class="btn btn-primary" onclick="copyToClipboard('correctedJson')">
+                                    Copiar JSON
+                                </button>
+                                <button id="saveButton" 
+                                        class="btn btn-success" 
+                                        onclick="saveJsonChanges()" 
+                                        style="display: none;">
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>  <!-- fechamento do container -->
+
+    <!-- Scripts (nesta ordem) -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let selectedDataServer = null;
+
+        // Utility functions for user feedback
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alert-container');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                    ${message}
+                    <button type="button" class="btn-close" onclick="closeAlert('${alertId}')"></button>
+                </div>
+            `;
+            
+            alertContainer.innerHTML = alertHtml;
+            
+            // Auto-hide success alerts after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => closeAlert(alertId), 5000);
+            }
+        }
+
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.classList.remove('show');
+                alert.classList.add('fade');
+                setTimeout(() => alert.remove(), 150);
+            }
+        }
+
+        function showLoading(show = true, message = 'Processando...') {
+            const loadingContainer = document.getElementById('loading-container');
+            const loadingText = loadingContainer.querySelector('.loading-text');
+            
+            if (show) {
+                loadingText.textContent = message;
+                loadingContainer.style.display = 'block';
+                loadingContainer.querySelector('.loading-spinner').style.display = 'block';
+                loadingContainer.querySelector('.loading-text').style.display = 'block';
+            } else {
+                loadingContainer.style.display = 'none';
+            }
+        }
+
+        async function searchDataServer() {
+            const term = document.getElementById('dataServerInput').value;
+            if (!term) {
+                showAlert('Digite o nome do DataServer', 'danger');
+                return;
+            }
+
+            // Clear previous alerts
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true, 'Buscando DataServer...');
+
+            try {
+                const response = await fetch(`/TestRequests/SearchDataServer?term=${encodeURIComponent(term)}`);
+                const result = await response.json();
+
+                showLoading(false);
+
+                if (result.success) {
+                    selectedDataServer = result.data;
+                    document.getElementById('dataServerInfo').style.display = 'block';
+                    document.getElementById('dataServerInfo').innerHTML = `
+                        <strong>DataServer:</strong> ${result.data.name}<br>
+                        <strong>Rotina:</strong> ${result.data.routine}
+                    `;
+                    showAlert('DataServer encontrado com sucesso!', 'success');
+                } else {
+                    showAlert('DataServer não encontrado', 'danger');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao buscar DataServer', 'danger');
+            }
+        }
+
+        async function compareJson() {
+            if (!selectedDataServer) {
+                showAlert('Primeiro busque um DataServer', 'danger');
+                return;
+            }
+
+            const userJson = document.getElementById('userJson').value;
+            if (!userJson) {
+                showAlert('Cole seu JSON para comparar', 'danger');
+                return;
+            }
+
+            // Clear previous alerts
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true, 'Comparando JSONs...');
+
+            try {
+                const response = await fetch('/CompareJson/CompareJson', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataServerName: selectedDataServer.name,
+                        userJson: userJson
+                    })
+                });
+
+                const result = await response.json();
+                showLoading(false);
+
+                if (result.success) {
+                    renderComparisonResult(result.data);
+                    showAlert('Comparação realizada com sucesso!', 'success');
+                } else {
+                    showAlert(`Erro: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao comparar JSONs', 'danger');
+            }
+        }
+
+        let isEditing = false;
+
+        function toggleJsonEdit() {
+            isEditing = !isEditing;
+            const preElement = document.getElementById('correctedJson');
+            const textArea = document.getElementById('correctedJsonEdit');
+            const saveButton = document.getElementById('saveButton');
+            const editButtonText = document.getElementById('editButtonText');
+
+            if (isEditing) {
+                // Muda para modo de edição
+                textArea.value = formatJson(preElement.textContent);
+                preElement.style.display = 'none';
+                textArea.style.display = 'block';
+                saveButton.style.display = 'inline-block';
+                editButtonText.textContent = 'Cancelar Edição';
+            } else {
+                // Volta para modo de visualização
+                preElement.style.display = 'block';
+                textArea.style.display = 'none';
+                saveButton.style.display = 'none';
+                editButtonText.textContent = 'Editar JSON';
+            }
+        }
+
+        function saveJsonChanges() {
+            try {
+                const textArea = document.getElementById('correctedJsonEdit');
+                const preElement = document.getElementById('correctedJson');
+                
+                // Valida se é um JSON válido
+                const jsonObj = JSON.parse(textArea.value);
+                const formattedJson = JSON.stringify(jsonObj, null, 2);
+                
+                // Atualiza a visualização
+                preElement.textContent = formattedJson;
+                
+                // Volta para modo de visualização
+                toggleJsonEdit();
+                
+                alert('JSON salvo com sucesso!');
+            } catch (error) {
+                alert('Erro: JSON inválido. Por favor, verifique a sintaxe.');
+                console.error('Erro ao salvar JSON:', error);
+            }
+        }
+
+        function formatJson(jsonString) {
+            try {
+                const obj = JSON.parse(typeof jsonString === 'string' ? jsonString : jsonString.toString());
+                return JSON.stringify(obj, null, 2);
+            } catch (e) {
+                console.error('Erro ao formatar JSON:', e);
+                return jsonString;
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = isEditing ? 
+                document.getElementById('correctedJsonEdit').value : 
+                element.textContent;
+
+            navigator.clipboard.writeText(text)
+                .then(() => showAlert('JSON copiado!', 'success'))
+                .catch(err => showAlert('Erro ao copiar: ' + err, 'danger'));
+        }
+
+        async function executePost() {
+            if (!selectedDataServer) {
+                showAlert('DataServer não encontrado', 'danger');
+                return;
+            }
+
+            // Clear previous alerts
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true, 'Executando POST...');
+
+            try {
+                const jsonToSend = isEditing ? 
+                    document.getElementById('correctedJsonEdit').value : 
+                    document.getElementById('correctedJson').textContent;
+
+                // Primeiro, comparamos o JSON para garantir que está correto
+                const compareResponse = await fetch('/CompareJson/CompareJson', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        dataServerName: selectedDataServer.name,
+                        userJson: jsonToSend,
+                        executePost: true // Adicionado flag para executar o POST
+                    })
+                });
+
+                const result = await compareResponse.json();
+                showLoading(false);
+
+                if (result.success) {
+                    if (result.postResponse) {
+                        // Se temos uma resposta do POST, mostramos
+                        const resultArea = document.createElement('div');
+                        resultArea.className = 'mt-3 alert alert-success';
+                        resultArea.innerHTML = `
+                            <h6>Resultado do POST:</h6>
+                            <pre class="mb-0">${formatJson(result.postResponse)}</pre>
+                        `;
+                        document.getElementById('correctedJson').parentNode.appendChild(resultArea);
+                        showAlert('POST executado com sucesso!', 'success');
+                    } else {
+                        // Se não há resposta do POST, mostramos as diferenças
+                        showAlert('JSON validado mas não foi executado POST. Verifique as diferenças.', 'warning');
+                    }
+                } else {
+                    showAlert(`Erro: ${result.error}`, 'danger');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao executar POST', 'danger');
+            }
+        }
+
+        function renderComparisonResult(data) {
+            // Debug: vamos ver o que está chegando
+            console.log('Dados recebidos:', data);
+            console.log('Diferenças:', data.differences);
+            if (data.differences && data.differences.length > 0) {
+                console.log('Primeira diferença:', data.differences[0]);
+            }
+            
+            // Mostra a área de resultados
+            document.getElementById('resultsArea').style.display = 'block';
+            
+            // Renderiza as diferenças
+            const differencesArea = document.getElementById('differencesArea');
+            if (data.differences && data.differences.length > 0) {
+                let differencesHtml = '<div class="alert alert-warning">';
+                data.differences.forEach(diff => {
+                    let className = '';
+                    switch(diff.type) {
+                        case 0: className = 'diff-missing'; break; // Missing
+                        case 1: className = 'diff-type'; break;    // TypeMismatch  
+                        case 2: className = 'diff-extra'; break;   // Extra
+                    }
+                    differencesHtml += `<div class="${className}">${diff.message}</div>`;
+                });
+                differencesHtml += '</div>';
+                differencesArea.innerHTML = differencesHtml;
+            } else {
+                differencesArea.innerHTML = '<div class="alert alert-success">Nenhuma diferença encontrada!</div>';
+            }
+            
+            // Renderiza o JSON de exemplo
+            document.getElementById('exampleJson').textContent = data.exampleJson;
+            
+            // Renderiza o JSON corrigido
+            document.getElementById('correctedJson').textContent = data.correctedJson;
+        }
+
+        // Adiciona event listener para restauração de estado da aba
+        document.addEventListener('tabStateRestored', function(event) {
+            console.log('CompareJson: Estado da aba restaurado');
+            
+            // Se há dados na comparação, mostra a área de resultados
+            if (event.detail && event.detail.resultsAreaDisplay) {
+                const resultsArea = document.getElementById('resultsArea');
+                if (resultsArea) {
+                    resultsArea.style.display = event.detail.resultsAreaDisplay;
+                }
+            }
+        });
+
+        // Adiciona event listener nos campos de input para auto-salvar estado
+        document.addEventListener('input', function(event) {
+            if (window.TabManager && typeof window.TabManager.triggerAutoSave === 'function') {
+                window.TabManager.triggerAutoSave();
+            }
+        });
+    </script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>

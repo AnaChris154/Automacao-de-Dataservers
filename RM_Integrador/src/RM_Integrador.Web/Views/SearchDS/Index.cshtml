@@ -1,0 +1,405 @@
+@{
+    ViewData["Title"] = "Buscar DataServers";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Buscar DataServers - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .system-group {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .dataserver-card {
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        .dataserver-card:hover {
+            transform: translateY(-3px);
+        }
+        .keywords-badge {
+            margin: 0.2rem;
+            padding: 0.3rem 0.6rem;
+            background-color: #e9ecef;
+            color: #495057;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+        }
+        .system-title {
+            color: #0d6efd;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .documentation-section {
+            background-color: #f8f9fa !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 0.375rem !important;
+            padding: 1rem !important;
+            margin-top: 1rem !important;
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            max-height: 0 !important;
+            overflow: hidden !important;
+            transition: all 0.3s ease !important;
+        }
+        .documentation-section.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            max-height: 1000px !important;
+        }
+        .documentation-section h6 {
+            color: #0d6efd;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .documentation-item {
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background-color: white;
+            border-radius: 0.25rem;
+            border-left: 4px solid #0d6efd;
+        }
+        .documentation-item .item-title {
+            font-weight: bold;
+            color: #495057;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+        .documentation-item .item-content {
+            color: #6c757d;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/User/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <h2>Buscar DataServers</h2>
+
+        <!-- Tabs -->
+        <ul class="nav nav-pills mb-4">
+            <li class="nav-item">
+                <a class="nav-link active" id="search-tab" data-bs-toggle="pill" href="#search">Buscar por Palavras-chave</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="view-tab" data-bs-toggle="pill" href="#view" onclick="loadAllDataServers()">Visualizar por Sistema</a>
+            </li>
+        </ul>
+
+        <!-- Conteúdo das Tabs -->
+        <div class="tab-content">
+            <!-- Tab de Busca -->
+            <div class="tab-pane fade show active" id="search">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control" 
+                                   placeholder="Digite um termo para busca (ex: funcionário, folha, ponto)">
+                            <button class="btn btn-primary" onclick="searchDataServers()">Buscar</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="searchResults"></div>
+            </div>
+
+            <!-- Tab de Visualização -->
+            <div class="tab-pane fade" id="view">
+                <div id="groupedResults"></div>
+            </div>
+        </div>
+    </div>  <!-- fechamento do container -->
+
+    <!-- Scripts (nesta ordem) -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function searchDataServers() {
+            const term = document.getElementById('searchInput').value;
+            if (!term) {
+                alert('Digite um termo para busca');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/SearchDS/SearchByKeywords?term=${encodeURIComponent(term)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displaySearchResults(result.data);
+                } else {
+                    alert(`Erro: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao buscar DataServers');
+            }
+        }
+
+        function displaySearchResults(dataServers) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!dataServers || dataServers.length === 0) {
+                resultsDiv.innerHTML = '<div class="alert alert-info">Nenhum DataServer encontrado</div>';
+                return;
+            }
+
+            const html = dataServers.map(ds => `
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">${ds.name}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Rotina: ${ds.routine}</h6>
+                        <p class="card-text">${ds.description || 'Sem descrição'}</p>
+                        
+                        <!-- Adicionando seção de chaves primárias -->
+                        ${ds.primaryKeys && ds.primaryKeys.length > 0 ? `
+                            <div class="mt-2">
+                                <strong>Chaves Primárias:</strong>
+                                <div class="primary-keys-container">
+                                    ${ds.primaryKeys.map(key => `
+                                        <span class="badge bg-info me-1">${key}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Keywords existentes -->
+                        ${ds.keywords && ds.keywords.length > 0 ? `
+                            <div class="mt-2">
+                                <strong>Keywords:</strong>
+                                <div class="keywords-container">
+                                    ${ds.keywords.map(keyword => `
+                                        <span class="badge bg-secondary me-1">${keyword}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <!-- Dicas de documentação -->
+                        ${renderDocumentation(ds)}
+                    </div>
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = html;
+        }
+
+        async function loadAllDataServers() {
+            try {
+                const response = await fetch('/SearchDS/GetAllGrouped');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayGroupedResults(result.data);
+                } else {
+                    alert(`Erro: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao carregar DataServers');
+            }
+        }
+
+        function displayGroupedResults(data) {
+            const resultsDiv = document.getElementById('groupedResults');
+            const { groups, systemNames } = data;
+
+            const html = Object.entries(groups).map(([prefix, dataServers]) => `
+                <div class="system-group">
+                    <h4 class="system-title">${systemNames[prefix] || prefix}</h4>
+                    <div class="row">
+                        ${dataServers.map(ds => `
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card dataserver-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${ds.name}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">Rotina: ${ds.routine}</h6>
+                                        <p class="card-text">${ds.description || 'Sem descrição'}</p>
+                                        
+                                        <!-- Adicionando seção de chaves primárias -->
+                                        ${ds.primaryKeys && ds.primaryKeys.length > 0 ? `
+                                            <div class="mt-2">
+                                                <strong>Chaves Primárias:</strong>
+                                                <div class="primary-keys-container">
+                                                    ${ds.primaryKeys.map(key => `
+                                                        <span class="badge bg-info me-1">${key}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        <!-- Keywords existentes -->
+                                        ${ds.keywords && ds.keywords.length > 0 ? `
+                                            <div class="mt-2">
+                                                <strong>Keywords:</strong>
+                                                <div class="keywords-container">
+                                                    ${ds.keywords.map(keyword => `
+                                                        <span class="badge bg-secondary me-1">${keyword}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        <!-- Dicas de documentação -->
+                                        ${renderDocumentation(ds)}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Função para renderizar dicas de documentação
+        function renderDocumentation(server) {
+            const hasDocumentation = server.commonErrors || server.consumptionTips || 
+                                   server.filterTips || server.usageExamples || server.notes;
+            
+            if (!hasDocumentation) {
+                return '';
+            }
+
+            const docId = `doc-${server.id}`;
+            const btnId = `btn-${server.id}`;
+
+            let documentationHtml = `
+                <button class="btn btn-outline-info btn-sm mt-2" id="${btnId}" onclick="toggleDocumentation('${docId}', '${btnId}')">
+                    <span>Saiba mais</span>
+                    <i class="fas fa-chevron-down ms-1" style="font-size: 0.7rem; transition: transform 0.2s ease;"></i>
+                </button>
+                <div class="documentation-section" id="${docId}" style="display: none !important; visibility: hidden !important; opacity: 0 !important;">
+                    <h6><i class="fas fa-book"></i> Dicas e Documentação</h6>
+                    <div class="documentation-content">`;
+
+            if (server.consumptionTips) {
+                documentationHtml += `
+                    <div class="documentation-item">
+                        <div class="item-title"><i class="fas fa-lightbulb text-warning"></i> Dicas de Consumo</div>
+                        <div class="item-content">${server.consumptionTips}</div>
+                    </div>`;
+            }
+
+            if (server.filterTips) {
+                documentationHtml += `
+                    <div class="documentation-item">
+                        <div class="item-title"><i class="fas fa-filter text-info"></i> Dicas de Filtros</div>
+                        <div class="item-content">${server.filterTips}</div>
+                    </div>`;
+            }
+
+            if (server.usageExamples) {
+                documentationHtml += `
+                    <div class="documentation-item">
+                        <div class="item-title"><i class="fas fa-code text-success"></i> Exemplos de Uso</div>
+                        <div class="item-content">${server.usageExamples}</div>
+                    </div>`;
+            }
+
+            if (server.commonErrors) {
+                documentationHtml += `
+                    <div class="documentation-item">
+                        <div class="item-title"><i class="fas fa-exclamation-triangle text-danger"></i> Erros Comuns</div>
+                        <div class="item-content">${server.commonErrors}</div>
+                    </div>`;
+            }
+
+            if (server.notes) {
+                documentationHtml += `
+                    <div class="documentation-item">
+                        <div class="item-title"><i class="fas fa-sticky-note text-secondary"></i> Observações</div>
+                        <div class="item-content">${server.notes}</div>
+                    </div>`;
+            }
+
+            documentationHtml += `
+                    </div>
+                </div>`;
+
+            return documentationHtml;
+        }
+
+        // Função para alternar a exibição da documentação
+        function toggleDocumentation(docId, btnId) {
+            const docSection = document.getElementById(docId);
+            const button = document.getElementById(btnId);
+            const arrow = button.querySelector('i');
+            
+            if (docSection.classList.contains('show')) {
+                // Ocultar
+                docSection.classList.remove('show');
+                docSection.style.display = 'none';
+                docSection.style.visibility = 'hidden';
+                docSection.style.opacity = '0';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-info');
+                button.querySelector('span').textContent = 'Saiba mais';
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                // Mostrar
+                docSection.classList.add('show');
+                docSection.style.display = 'block';
+                docSection.style.visibility = 'visible';
+                docSection.style.opacity = '1';
+                button.classList.remove('btn-outline-info');
+                button.classList.add('btn-success');
+                button.querySelector('span').textContent = 'Mostrar menos';
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Event listener para o campo de busca
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchDataServers();
+            }
+        });
+
+        // Adiciona event listener para restauração de estado da aba
+        document.addEventListener('tabStateRestored', function(event) {
+            console.log('SearchDS: Estado da aba restaurado');
+            
+            // Se há termo de busca salvo, executa a busca automaticamente
+            if (event.detail && event.detail.searchInputValue) {
+                setTimeout(() => {
+                    searchDataServers();
+                }, 100);
+            }
+
+            // Se há resultados salvos, pode restaurar a aba ativa
+            if (event.detail && event.detail.activeTab) {
+                const tabElement = document.querySelector(`#${event.detail.activeTab}-tab`);
+                if (tabElement) {
+                    tabElement.click();
+                }
+            }
+        });
+
+        // Adiciona event listener nos campos de input para auto-salvar estado
+        document.addEventListener('input', function(event) {
+            if (window.TabManager && typeof window.TabManager.triggerAutoSave === 'function') {
+                window.TabManager.triggerAutoSave();
+            }
+        });
+    </script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>

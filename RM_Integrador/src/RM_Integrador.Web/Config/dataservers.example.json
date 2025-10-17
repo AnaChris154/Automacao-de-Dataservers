@@ -1,0 +1,47 @@
+{
+  "dataServers": [
+    {
+      "name": "EmployeeData",
+      "description": "Employee information and details",
+      "endpoints": {
+        "get": "/api/employee",
+        "post": "/api/employee/create",
+        "put": "/api/employee/update",
+        "delete": "/api/employee/delete"
+      },
+      "requiredFields": ["ID", "NAME"],
+      "optionalFields": ["DEPARTMENT", "POSITION", "HIRE_DATE", "SALARY"],
+      "filters": {
+        "available": ["ACTIVE", "DEPARTMENT", "HIRE_DATE"],
+        "examples": [
+          "ACTIVE = 1",
+          "DEPARTMENT = 'IT'",
+          "HIRE_DATE >= '2023-01-01'"
+        ]
+      }
+    },
+    {
+      "name": "DepartmentData",
+      "description": "Department structure and hierarchy",
+      "endpoints": {
+        "get": "/api/department",
+        "post": "/api/department/create"
+      },
+      "requiredFields": ["DEPT_ID", "DEPT_NAME"],
+      "optionalFields": ["MANAGER_ID", "LOCATION", "BUDGET"],
+      "filters": {
+        "available": ["ACTIVE", "LOCATION"],
+        "examples": [
+          "ACTIVE = 1",
+          "LOCATION = 'HQ'"
+        ]
+      }
+    }
+  ],
+  "globalSettings": {
+    "timeout": 30,
+    "maxResults": 1000,
+    "supportedFormats": ["JSON", "CSV"],
+    "defaultFilters": ["ACTIVE = 1"]
+  }
+}

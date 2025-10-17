@@ -1,0 +1,57 @@
+html {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+}
+
+body {
+  margin-bottom: 60px;
+}
+
+/* Loading indicator styles */
+#loadingIndicator {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#loadingMessage {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+/* Button loading state */
+#loginButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+#loginButtonSpinner {
+  margin-left: 8px;
+}
+
+/* Smooth transitions */
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+
+.alert {
+  transition: opacity 0.3s ease-in-out;
+}

@@ -1,0 +1,1135 @@
+@{
+    ViewData["Title"] = "Teste de Requisições";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Requisições - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/spinner.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .json-display {
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .loading-text {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* Success/Error messages */
+        .alert {
+            position: relative;
+            z-index: 2;
+            padding: 0.75rem 1.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/User/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <h2>Teste de Requisições para DataServers</h2>
+    
+    <!-- Alert container for success/error messages -->
+    <div id="alert-container"></div>
+
+    <!-- Loading indicator -->
+    <div id="loading-container" class="text-center" style="display: none;">
+        <div class="spinner request-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+        <div class="loading-text">Processando requisição...</div>
+    </div>
+
+    <!-- Status da conexão RM -->
+    <div id="rm-connection-status" class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Detectando RM local...
+    </div>
+
+    <!-- Informações de Ambiente -->
+    <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-server"></i> Informações do Ambiente</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Ambiente:</strong> <span id="env-environment" class="badge bg-secondary">Carregando...</span></p>
+                        <p><strong>RM Local Disponível:</strong> <span id="env-local-rm">-</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>URL Atual do RM:</strong> <br><small id="env-current-url" class="text-break">-</small></p>
+                        <p><strong>Portas Disponíveis:</strong> <span id="env-ports">-</span></p>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <a href="/Environment" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-cog"></i> Configurações Avançadas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configurações de Execução -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-cogs"></i> Configurações de Execução</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="execution-mode" class="form-label">Modo de Execução:</label>
+                        <select id="execution-mode" class="form-select">
+                            <option value="auto">🔄 Automático (Local → Servidor)</option>
+                            <option value="local">🏠 Apenas Local</option>
+                            <option value="server">🌐 Apenas Servidor</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ações:</label>
+                        <div class="d-flex gap-2">
+                            <button id="redetectRMBtn" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-sync"></i> Re-detectar RM
+                            </button>
+                            <button id="showRMStatusBtn" class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-info"></i> Status
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#rmCredentialsModal">
+                                <i class="fas fa-key"></i> Credenciais
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Busca de DataServer -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-search"></i> Buscar DataServer</h5>
+            </div>
+            <div class="card-body">
+                <div class="input-group">
+                    <input type="text" id="dataServerInput" class="form-control" placeholder="Nome do DataServer">
+                    <button id="selectDataServerBtn" class="btn btn-primary" type="button">Buscar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DataServer Info -->
+        <div id="dataServerInfo" style="display: none;" class="alert alert-success">
+            <strong>DataServer:</strong> <span id="serverName"></span><br>
+            <strong>Rotina:</strong> <span id="serverRoutine"></span><br>
+            <strong>Chaves Primárias:</strong> <span id="primaryKeys"></span>
+        </div>
+        
+        <!-- Operations Selector -->
+        <div id="operationsSelector" style="display: none;" class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-exchange-alt"></i> Selecione a Operação</h5>
+            </div>
+            <div class="card-body">
+                <p>Escolha o tipo de operação para o DataServer selecionado:</p>
+                <div class="d-flex gap-3">
+                    <button id="showGetOptionsBtn" class="btn btn-info btn-lg">
+                        <i class="fas fa-download me-2"></i> GET - Consultar Dados
+                    </button>
+                    <button id="showPostOptionsBtn" class="btn btn-primary btn-lg">
+                        <i class="fas fa-upload me-2"></i> POST - Enviar Dados
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operations Section -->
+        <div id="operationsSection" style="display: none;">
+            
+            <!-- GET Options -->
+            <div id="getOptions" class="card mb-3">
+                <div class="card-header">
+                    <h5>Opções GET</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="filterInput" class="form-label">Filtro (opcional):</label>
+                        <input type="text" id="filterInput" class="form-control" placeholder="Ex: CODFILIAL = 1">
+                    </div>
+                    <button class="btn btn-info" onclick="executeGet()">Executar GET</button>
+                </div>
+            </div>
+
+            <!-- POST Options -->
+            <div id="postOptions" class="card mb-3">
+                <div class="card-header">
+                    <h5>Opções POST</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-info-circle"></i> Chaves Primárias:</strong><br>
+                        IDs únicos são gerados automaticamente para evitar conflitos de "chave duplicada".<br>
+                        Use os botões <i class="fas fa-refresh"></i> para gerar novos IDs ou <i class="fas fa-search"></i> para verificar disponibilidade.
+                    </div>
+                    
+                    <form id="primaryKeysForm">
+                        <!-- Campos serão criados dinamicamente -->
+                    </form>
+                    
+                    <div class="alert alert-success mt-3">
+                        <strong><i class="fas fa-check-circle"></i> Dados automáticos:</strong><br>
+                        As demais informações serão preenchidas automaticamente com base no exemplo cadastrado.
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="preparePost()">📋 Preparar JSON</button>
+                </div>
+            </div>
+
+            <!-- JSON Preparation Area -->
+            <div id="jsonPreparationArea" class="card mb-3" style="display: none;">
+                <div class="card-header">
+                    <h5><i class="fas fa-edit"></i> JSON Preparado para Envio</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-info-circle"></i> Revisão e Edição:</strong><br>
+                        O JSON foi montado com suas chaves primárias e dados padrão. Você pode editá-lo antes do envio.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="preparedJson" class="form-label">JSON para Envio:</label>
+                        <textarea id="preparedJson" class="form-control json-display" rows="15" style="font-family: 'Consolas', monospace;"></textarea>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="sendPreparedJson()">
+                            <i class="fas fa-paper-plane"></i> Enviar JSON
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="formatJsonInTextarea()">
+                            <i class="fas fa-code"></i> Formatar JSON
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="goBackToKeys()">
+                            <i class="fas fa-arrow-left"></i> Voltar às Chaves
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultArea" class="card" style="display: none;">
+            <div class="card-header">
+                <h5>Resultado</h5>
+            </div>
+            <div class="card-body">
+                <pre id="resultContent" class="json-display bg-light p-3 rounded"></pre>
+                <div class="mt-3">
+                    <button class="btn btn-outline-primary" onclick="backToMain()">
+                        <i class="fas fa-arrow-left"></i> Nova Consulta
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="saveResult()">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+        </div>
+
+    <!-- Modal para Configuração de Credenciais RM Local -->
+    <div class="modal fade" id="rmCredentialsModal" tabindex="-1" aria-labelledby="rmCredentialsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rmCredentialsModalLabel">
+                        <i class="fas fa-key"></i> Configurar Credenciais RM Local
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Configure as credenciais para acesso direto ao RM local da sua máquina.
+                    </div>
+                    
+                    <form id="rmCredentialsForm">
+                        <div class="mb-3">
+                            <label for="rmUsername" class="form-label">Usuário:</label>
+                            <input type="text" class="form-control" id="rmUsername" value="mestre" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rmPassword" class="form-label">Senha:</label>
+                            <input type="password" class="form-control" id="rmPassword" value="totvs" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="rmCodColigada" class="form-label">Código da Coligada:</label>
+                            <input type="text" class="form-control" id="rmCodColigada" value="1" required>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="testRMCredentials()">
+                                <i class="fas fa-vial"></i> Testar Credenciais
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="clearRMCredentials()">
+                                <i class="fas fa-trash"></i> Limpar
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="credentialsTestResult" class="mt-3"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRMCredentials()">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/dual-request-manager.js"></script>
+    
+    <!-- Tab System Styles -->
+    <style>
+        .tab-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 0.5rem;
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .tab {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            margin-right: 0.25rem;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+        .tab-close {
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 2px;
+        }
+        .tab-close:hover {
+            opacity: 1;
+            background: rgba(255,255,255,0.2);
+        }
+        .tab-content {
+            padding: 1rem;
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+    
+    <script>
+        // Tab Manager Class
+        class TabManager {
+            constructor() {
+                this.tabs = new Map();
+                this.activeTabId = null;
+            }
+            
+            createTab(title, content, id = null) {
+                const tabId = id || 'tab-' + Date.now();
+                
+                // Se a aba já existe, apenas ativa ela
+                if (this.tabs.has(tabId)) {
+                    this.activateTab(tabId);
+                    return tabId;
+                }
+                
+                const tab = {
+                    id: tabId,
+                    title: title,
+                    content: content
+                };
+                
+                this.tabs.set(tabId, tab);
+                this.renderTab(tab);
+                this.activateTab(tabId);
+                return tabId;
+            }
+            
+            renderTab(tab) {
+                const tabBar = document.getElementById('tabBar');
+                const tabElement = document.createElement('div');
+                tabElement.className = 'tab';
+                tabElement.setAttribute('data-tab-id', tab.id);
+                tabElement.innerHTML = `
+                    <span class="tab-title">${tab.title}</span>
+                    <span class="tab-close" onclick="event.stopPropagation(); tabManager.closeTab('${tab.id}')">&times;</span>
+                `;
+                
+                tabBar.appendChild(tabElement);
+                
+                // Adiciona evento de clique para ativar aba
+                tabElement.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('tab-close')) {
+                        this.activateTab(tab.id);
+                    }
+                });
+            }
+            
+            activateTab(tabId) {
+                if (this.activeTabId === tabId) return;
+                
+                // Remove ativo da aba anterior
+                if (this.activeTabId) {
+                    const oldTab = document.querySelector(`[data-tab-id="${this.activeTabId}"]`);
+                    if (oldTab) oldTab.classList.remove('active');
+                }
+                
+                // Ativa nova aba
+                const newTab = document.querySelector(`[data-tab-id="${tabId}"]`);
+                if (newTab) {
+                    newTab.classList.add('active');
+                    this.activeTabId = tabId;
+                }
+                
+                // Atualiza o conteúdo
+                const tab = this.tabs.get(tabId);
+                if (tab) {
+                    document.getElementById('tabContent').innerHTML = tab.content;
+                    
+                    // Reinitializa os eventos da nova aba se necessário
+                    this.reinitializeTabEvents(tabId);
+                }
+            }
+            
+            closeTab(tabId) {
+                const tabElement = document.querySelector(`[data-tab-id="${tabId}"]`);
+                if (tabElement) {
+                    tabElement.remove();
+                    this.tabs.delete(tabId);
+                    
+                    // Se estava ativa, ativa outra aba
+                    if (this.activeTabId === tabId) {
+                        const remainingTabs = Array.from(this.tabs.keys());
+                        if (remainingTabs.length > 0) {
+                            this.activateTab(remainingTabs[remainingTabs.length - 1]);
+                        } else {
+                            document.getElementById('tabContent').innerHTML = '<div class="container mt-4"><p class="text-muted">Nenhuma aba aberta. Use o menu para abrir uma nova aba.</p></div>';
+                            this.activeTabId = null;
+                        }
+                    }
+                }
+            }
+            
+            reinitializeTabEvents(tabId) {
+                // Se for a aba principal, reinitializa os eventos específicos
+                if (tabId === 'main') {
+                    // Carregar credenciais salvas
+                    loadSavedCredentials();
+                    
+                    // Detecção automática do RM e carregamento de informações do ambiente
+                    redetectRM();
+                    
+                    // Configurar eventos do modal
+                    const modal = document.getElementById('rmCredentialsModal');
+                    if (modal) {
+                        modal.addEventListener('show.bs.modal', function () {
+                            loadSavedCredentials();
+                        });
+                    }
+                    
+                    // Configurar mudança do modo de execução
+                    const executionMode = document.getElementById('execution-mode');
+                    if (executionMode) {
+                        executionMode.addEventListener('change', function() {
+                            const selectedMode = this.value;
+                            localStorage.setItem('rm-execution-mode', selectedMode);
+                        });
+                        
+                        // Restaurar preferência do usuário
+                        const savedMode = localStorage.getItem('rm-execution-mode');
+                        if (savedMode) {
+                            executionMode.value = savedMode;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Instância global do gerenciador de abas
+        window.tabManager = new TabManager();
+        
+        // Função para abrir uma nova aba (pode ser chamada do menu)
+        function openNewTab(title, contentUrl) {
+            // Esta função pode ser expandida para carregar conteúdo via AJAX
+            console.log(`Abrindo nova aba: ${title} - ${contentUrl}`);
+            const sampleContent = `
+                <div class="container mt-4">
+                    <h2>${title}</h2>
+                    <p>Conteúdo da aba ${title} será carregado aqui.</p>
+                    <p><small>URL: ${contentUrl}</small></p>
+                </div>
+            `;
+            tabManager.createTab(title, sampleContent);
+        }
+    <script>
+        // Inicializar o DualRequestManager
+        const dualRequestManager = window.dualRequestManager;
+        let selectedDataServer = null;
+
+        // Remover inicialização automática para evitar chamadas desnecessárias
+        // document.addEventListener('DOMContentLoaded', async function() {
+        //     await loadEnvironmentInfo();
+        //     await redetectRM();
+        // });
+
+        // Carrega informações de ambiente
+        async function loadEnvironmentInfo() {
+            try {
+                console.log('Carregando informações do ambiente...');
+                const envInfo = await dualRequestManager.getEnvironmentInfo();
+                console.log('Informações do ambiente carregadas:', envInfo);
+                
+                // Verificar se o elemento existe antes de atualizar
+                const envElement = document.getElementById('env-environment');
+                if (envElement) {
+                    envElement.textContent = envInfo.environment || 'Desconhecido';
+                    envElement.className = `badge bg-${envInfo.isProduction ? 'danger' : 'success'}`;
+                }
+                
+                // Status do RM local
+                const rmStatusElement = document.getElementById('env-local-rm');
+                if (rmStatusElement) {
+                    const isAvailable = envInfo.isLocalRMAvailable || dualRequestManager.detectionResults.isLocalAvailable;
+                    rmStatusElement.innerHTML = isAvailable ? 
+                        '<span class="badge bg-success">Disponível</span>' : 
+                        '<span class="badge bg-warning">Indisponível</span>';
+                }
+                
+                // URL atual
+                const urlElement = document.getElementById('env-current-url');
+                if (urlElement) {
+                    const currentUrl = envInfo.currentRMUrl || dualRequestManager.detectionResults.localUrl || '-';
+                    urlElement.textContent = currentUrl;
+                }
+                
+                // Portas disponíveis
+                const portsElement = document.getElementById('env-ports');
+                if (portsElement) {
+                    const ports = envInfo.availableRMPorts?.length > 0 ? 
+                        envInfo.availableRMPorts.join(', ') : 
+                        dualRequestManager.config.commonPorts.join(', ');
+                    portsElement.textContent = ports || 'Nenhuma';
+                }
+                
+                console.log('Interface atualizada com sucesso!');
+            } catch (error) {
+                console.warn('Erro ao carregar informações de ambiente:', error);
+                
+                // Em caso de erro, pelo menos tentar exibir informações da detecção do RM
+                if (dualRequestManager.detectionResults.isLocalAvailable) {
+                    document.getElementById('env-local-rm').innerHTML = '<span class="badge bg-success">Disponível</span>';
+                    document.getElementById('env-current-url').textContent = dualRequestManager.detectionResults.localUrl;
+                }
+            }
+        }
+
+        // Função para detectar RM e atualizar UI
+        async function redetectRM() {
+            try {
+                const statusElement = document.getElementById('rm-connection-status');
+                statusElement.className = 'alert alert-warning';
+                statusElement.innerHTML = '<i class="fas fa-sync fa-spin"></i> Detectando RM local...';
+                
+                const result = await dualRequestManager.detectLocalRM();
+                
+                if (result.isLocalAvailable) {
+                    statusElement.className = 'alert alert-success';
+                    statusElement.innerHTML = `<i class="fas fa-check-circle"></i> RM local detectado em ${result.localUrl}`;
+                    showAlert('RM local detectado com sucesso!', 'success');
+                } else {
+                    statusElement.className = 'alert alert-warning';
+                    statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> RM local não detectado. Será usado o servidor.';
+                    showAlert('RM local não detectado. Será usado o servidor.', 'warning');
+                }
+                
+                // Atualizar informações do ambiente após a detecção do RM
+                await loadEnvironmentInfo();
+            } catch (error) {
+                const statusElement = document.getElementById('rm-connection-status');
+                statusElement.className = 'alert alert-danger';
+                statusElement.innerHTML = '<i class="fas fa-times-circle"></i> Erro ao detectar RM local';
+                showAlert('Erro ao detectar RM: ' + error.message, 'danger');
+            }
+        }
+
+        // Função para mostrar status do RM
+        function showRMStatus() {
+            const status = dualRequestManager.getDetectionStatus();
+            const message = `
+                Status do RM Local:
+                - Disponível: ${status.isLocalAvailable ? 'Sim' : 'Não'}
+                - URL: ${status.localUrl || 'Não detectado'}
+                - Versão: ${status.localVersion || 'Desconhecida'}
+                - Última detecção: ${status.detectionTime ? new Date(status.detectionTime).toLocaleString() : 'Nunca'}
+                - Detectando: ${status.isDetecting ? 'Sim' : 'Não'}
+            `;
+            alert(message);
+        }
+
+        // Função para salvar credenciais do RM
+        async function saveRMCredentials() {
+            const username = document.getElementById('rmUsername').value;
+            const password = document.getElementById('rmPassword').value;
+            const codColigada = document.getElementById('rmCodColigada').value;
+            
+            if (!username || !password || !codColigada) {
+                showAlert('Por favor, preencha todos os campos', 'warning');
+                return;
+            }
+            
+            try {
+                dualRequestManager.setLocalCredentials(username, password, codColigada);
+                showAlert('Credenciais salvas com sucesso!', 'success');
+                
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('rmCredentialsModal'));
+                modal.hide();
+                
+                // Re-detectar RM com novas credenciais
+                await redetectRM();
+                
+            } catch (error) {
+                showAlert('Erro ao salvar credenciais: ' + error.message, 'danger');
+            }
+        }
+        
+        // Função para testar credenciais do RM
+        async function testRMCredentials() {
+            const username = document.getElementById('rmUsername').value;
+            const password = document.getElementById('rmPassword').value;
+            const codColigada = document.getElementById('rmCodColigada').value;
+            
+            if (!username || !password || !codColigada) {
+                document.getElementById('credentialsTestResult').innerHTML = 
+                    '<div class="alert alert-warning">Por favor, preencha todos os campos</div>';
+                return;
+            }
+            
+            document.getElementById('credentialsTestResult').innerHTML = 
+                '<div class="alert alert-info">Testando credenciais...</div>';
+            
+            try {
+                const result = await dualRequestManager.testLocalCredentials(username, password, codColigada);
+                
+                if (result.success) {
+                    document.getElementById('credentialsTestResult').innerHTML = 
+                        '<div class="alert alert-success"><i class="fas fa-check"></i> ' + result.message + '</div>';
+                } else {
+                    document.getElementById('credentialsTestResult').innerHTML = 
+                        '<div class="alert alert-danger"><i class="fas fa-times"></i> ' + result.message + '</div>';
+                }
+                
+            } catch (error) {
+                document.getElementById('credentialsTestResult').innerHTML = 
+                    '<div class="alert alert-danger"><i class="fas fa-times"></i> Erro: ' + error.message + '</div>';
+            }
+        }
+        
+        // Função para limpar credenciais do RM
+        function clearRMCredentials() {
+            document.getElementById('rmUsername').value = '';
+            document.getElementById('rmPassword').value = '';
+            document.getElementById('rmCodColigada').value = '1';
+            document.getElementById('credentialsTestResult').innerHTML = '';
+            
+            dualRequestManager.clearLocalCredentials();
+        }
+        
+        // Função para carregar credenciais salvas
+        function loadSavedCredentials() {
+            const savedCredentials = localStorage.getItem('rm-local-credentials');
+            if (savedCredentials) {
+                const credentials = JSON.parse(savedCredentials);
+                document.getElementById('rmUsername').value = credentials.username || '';
+                document.getElementById('rmPassword').value = credentials.password || '';
+                document.getElementById('rmCodColigada').value = credentials.codColigada || '1';
+            }
+        }
+
+        // Utility functions
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alert-container');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i>
+                    ${message}
+                    <button type="button" class="btn-close" onclick="closeAlert('${alertId}')"></button>
+                </div>
+            `;
+            
+            alertContainer.innerHTML = alertHtml;
+            
+            if (type === 'success') {
+                setTimeout(() => closeAlert(alertId), 5000);
+            }
+        }
+
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.classList.remove('show');
+                alert.classList.add('fade');
+                setTimeout(() => alert.remove(), 150);
+            }
+        }
+
+        function showLoading(show = true) {
+            const loadingContainer = document.getElementById('loading-container');
+            const operationsSection = document.getElementById('operationsSection');
+            const operationsSelector = document.getElementById('operationsSelector');
+            
+            if (show) {
+                loadingContainer.style.display = 'block';
+                loadingContainer.querySelector('.spinner').style.display = 'block';
+                loadingContainer.querySelector('.loading-text').style.display = 'block';
+                if (operationsSection) operationsSection.style.display = 'none';
+                if (operationsSelector) operationsSelector.style.display = 'none';
+            } else {
+                loadingContainer.style.display = 'none';
+                // Se temos um dataserver selecionado, mostra o seletor de operações
+                if (selectedDataServer && operationsSelector) {
+                    operationsSelector.style.display = 'block';
+                }
+            }
+        }
+
+        // DataServer functions
+        async function selectDataServer() {
+            const term = document.getElementById('dataServerInput').value;
+            console.log('Termo de busca:', term);
+            
+            if (!term || term.trim() === '') {
+                showAlert('Digite o nome do DataServer', 'danger');
+                return;
+            }
+
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true);
+            
+            try {
+                const url = `/TestRequests/SearchDataServer?term=${encodeURIComponent(term.trim())}`;
+                console.log('URL da requisição:', url);
+                
+                const response = await fetch(url);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data recebida:', data);
+                
+                showLoading(false);
+                
+                if (data.success && data.data) {
+                    selectedDataServer = data.data;
+                    document.getElementById('dataServerInfo').innerHTML = `
+                        <strong>DataServer:</strong> ${data.data.name}<br>
+                        <strong>Rotina:</strong> ${data.data.routine}<br>
+                        <strong>Chaves Primárias:</strong> ${(data.data.primaryKeys || []).join(', ')}
+                    `;
+                    
+                    document.getElementById('dataServerInfo').style.display = 'block';
+                    
+                    // Mostrar o seletor de operações (GET/POST)
+                    document.getElementById('operationsSelector').style.display = 'block';
+                    
+                    // Oculta a seção de operações específicas até que o usuário escolha
+                    document.getElementById('operationsSection').style.display = 'none';
+                    
+                    showAlert('DataServer carregado com sucesso! Escolha GET ou POST abaixo.', 'success');
+                } else {
+                    console.error('Erro na resposta:', data.error);
+                    showAlert('DataServer não encontrado', 'danger');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao buscar DataServer', 'danger');
+            }
+        }
+
+        function showGetOptions() {
+            document.getElementById('operationsSection').style.display = 'block';
+            document.getElementById('getOptions').style.display = 'block';
+            document.getElementById('postOptions').style.display = 'none';
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+        }
+
+        function showPostOptions() {
+            if (!selectedDataServer) return;
+            
+            const form = document.getElementById('primaryKeysForm');
+            form.innerHTML = '';
+            
+            document.getElementById('operationsSection').style.display = 'block';
+            
+            selectedDataServer.primaryKeys.forEach(key => {
+                form.innerHTML += `
+                    <div class="mb-3">
+                        <label for="key-${key}" class="form-label">${key}:</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control primary-key-input" id="key-${key}" data-key="${key}" placeholder="Digite o valor para ${key}">
+                            <button class="btn btn-outline-info" type="button" onclick="checkIfExists('${key}', 'key-${key}')" title="Verificar se ID já existe">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Digite o valor da chave primária. Clique em <i class="fas fa-search"></i> para verificar se já existe.</div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('getOptions').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+        }
+
+        // Função para verificar se um ID já existe
+        async function checkIfExists(keyName, fieldId) {
+            const field = document.getElementById(fieldId);
+            const idValue = field.value;
+            
+            if (!idValue) {
+                showAlert('Digite um ID para verificar', 'warning');
+                return;
+            }
+
+            try {
+                showLoading(true, 'Verificando se ID já existe...');
+                
+                // Usa o GET para verificar se existe um registro com essa chave
+                const filter = `${keyName}='${idValue}'`;
+                const response = await fetch('/TestRequests/ExecuteGet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dataServerName: selectedDataServer.name,
+                        filter: filter
+                    })
+                });
+
+                const result = await response.json();
+                showLoading(false);
+
+                if (result.success) {
+                    try {
+                        const data = JSON.parse(result.data);
+                        if (data && Array.isArray(data) && data.length > 0) {
+                            showAlert(`⚠️ ID "${idValue}" já existe! Digite um valor diferente.`, 'warning');
+                            field.style.borderColor = '#ffc107';
+                        } else {
+                            showAlert(`✅ ID "${idValue}" está disponível!`, 'success');
+                            field.style.borderColor = '#28a745';
+                        }
+                    } catch (e) {
+                        showAlert(`✅ ID "${idValue}" está disponível!`, 'success');
+                        field.style.borderColor = '#28a745';
+                    }
+                } else {
+                    showAlert(`✅ ID "${idValue}" está disponível!`, 'success');
+                    field.style.borderColor = '#28a745';
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro ao verificar ID:', error);
+                showAlert('Erro ao verificar ID. Assumindo que está disponível.', 'info');
+                field.style.borderColor = '#17a2b8';
+            }
+        }
+
+        async function executeGet() {
+            if (!selectedDataServer) return;
+            
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true);
+            
+            try {
+                const executionMode = document.getElementById('execution-mode').value;
+                
+                if (executionMode === 'local') {
+                    // Usar sistema híbrido para local
+                    const result = await dualRequestManager.executeRequest(
+                        selectedDataServer.name, 
+                        {},
+                        'local'
+                    );
+                    
+                    document.getElementById('resultContent').textContent = JSON.stringify(result, null, 2);
+                    document.getElementById('resultArea').style.display = 'block';
+                    showAlert('Requisição GET executada com sucesso via RM local!', 'success');
+                } else {
+                    // Usar servidor tradicional
+                    const response = await fetch('/TestRequests/ExecuteGet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            dataServerName: selectedDataServer.name,
+                            filter: document.getElementById('filterInput').value
+                        })
+                    });
+
+                    const result = await response.json();
+                    showLoading(false);
+                    
+                    if (result.success) {
+                        document.getElementById('resultContent').textContent = result.data;
+                        document.getElementById('resultArea').style.display = 'block';
+                        showAlert('Requisição GET executada com sucesso!', 'success');
+                    } else {
+                        showAlert('Erro: ' + result.error, 'danger');
+                    }
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao executar GET', 'danger');
+            }
+        }
+
+        // Nova função para preparar o JSON
+        async function preparePost() {
+            if (!selectedDataServer) return;
+            
+            document.getElementById('alert-container').innerHTML = '';
+            
+            const primaryKeys = {};
+            const inputs = document.querySelectorAll('.primary-key-input');
+            for (const input of inputs) {
+                if (!input.value) {
+                    showAlert(`Por favor, preencha o campo ${input.dataset.key}`, 'danger');
+                    input.focus();
+                    return;
+                }
+                primaryKeys[input.dataset.key] = input.value;
+            }
+
+            showLoading(true, 'Preparando JSON...');
+            
+            try {
+                const response = await fetch('/TestRequests/PreparePost', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        dataServerName: selectedDataServer.name,
+                        postData: primaryKeys
+                    })
+                });
+
+                const result = await response.json();
+                showLoading(false);
+                
+                if (result.success) {
+                    // Mostra o JSON preparado na área de edição
+                    document.getElementById('preparedJson').value = result.data.preparedJson;
+                    document.getElementById('jsonPreparationArea').style.display = 'block';
+                    
+                    // Esconde a área de chaves primárias
+                    document.getElementById('postOptions').style.display = 'none';
+                    
+                    showAlert('JSON preparado com sucesso! Revise e edite se necessário.', 'success');
+                } else {
+                    showAlert('Erro ao preparar JSON: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert('Erro ao preparar JSON', 'danger');
+            }
+        }
+
+        // Nova função para enviar o JSON preparado
+        async function sendPreparedJson() {
+            if (!selectedDataServer) return;
+            
+            const jsonData = document.getElementById('preparedJson').value;
+            
+            if (!jsonData.trim()) {
+                showAlert('O JSON não pode estar vazio', 'danger');
+                return;
+            }
+
+            // Valida se é um JSON válido
+            try {
+                JSON.parse(jsonData);
+            } catch (e) {
+                showAlert('JSON inválido. Por favor, corrija a sintaxe.', 'danger');
+                return;
+            }
+
+            document.getElementById('alert-container').innerHTML = '';
+            showLoading(true, 'Enviando JSON...');
+            
+            try {
+                console.log('Enviando JSON para o servidor:', {
+                    dataServerName: selectedDataServer.name,
+                    jsonData: jsonData
+                });
+                
+                // Tenta primeiro o método normal
+                try {
+                    const url = '/TestRequests/SendPreparedPost';
+                    console.log('URL da requisição:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            dataServerName: selectedDataServer.name,
+                            jsonData: jsonData
+                        })
+                    });
+                    
+                    console.log('Status da resposta:', response.status);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await response.text();
+                        throw new Error(`Resposta inválida do servidor: ${text.substring(0, 100)}...`);
+                    }
+
+                    const result = await response.json();
+                    showLoading(false);
+                    
+                    if (result.success) {
+                        document.getElementById('resultContent').textContent = result.data;
+                        document.getElementById('resultArea').style.display = 'block';
+                        showAlert('POST executado com sucesso!', 'success');
+                    } else {
+                        throw new Error(result.error || 'Erro desconhecido');
+                    }
+                } catch (primaryError) {
+                    console.error('Erro na requisição primária:', primaryError);
+                    console.log('Tentando via proxy...');
+                    
+                    // Se falhar, tenta via proxy
+                    const proxyUrl = '/api/proxy/forward-rm-request';
+                    const proxyResponse = await fetch(proxyUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            method: 'POST',
+                            dataServerName: selectedDataServer.name,
+                            jsonData: jsonData
+                        })
+                    });
+                    
+                    if (!proxyResponse.ok) {
+                        const proxyErrorText = await proxyResponse.text();
+                        throw new Error(`Erro no proxy: ${proxyResponse.status} - ${proxyErrorText}`);
+                    }
+                    
+                    const proxyResult = await proxyResponse.json();
+                    showLoading(false);
+                    
+                    if (proxyResult.success) {
+                        document.getElementById('resultContent').textContent = proxyResult.data;
+                        document.getElementById('resultArea').style.display = 'block';
+                        showAlert('POST executado com sucesso via proxy!', 'success');
+                    } else {
+                        throw new Error(proxyResult.error || 'Erro desconhecido via proxy');
+                    }
+                }
+            } catch (error) {
+                showLoading(false);
+                console.error('Erro:', error);
+                showAlert(`Erro ao enviar JSON: ${error.message}`, 'danger');
+            }
+        }
+
+        // Função para formatar o JSON no textarea
+        function formatJsonInTextarea() {
+            try {
+                const textarea = document.getElementById('preparedJson');
+                const jsonObj = JSON.parse(textarea.value);
+                textarea.value = JSON.stringify(jsonObj, null, 2);
+                showAlert('JSON formatado com sucesso!', 'success');
+            } catch (e) {
+                showAlert('Erro ao formatar JSON: verifique a sintaxe', 'danger');
+            }
+        }
+
+        // Função para voltar às chaves primárias
+        function goBackToKeys() {
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+        }
+
+        async function executePost() {
+            // Redireciona para o novo fluxo
+            showAlert('Agora use o botão "Preparar JSON" para seguir o novo fluxo!', 'info');
+        }
+
+        // Inicialização
+        $(document).ready(function() {
+            // Inicializa a primeira aba com o conteúdo principal
+            const mainContent = document.getElementById('mainScreenTemplate').innerHTML;
+            tabManager.createTab('Teste de Requisições', mainContent, 'main');
+            
+            // Adiciona botão para criar novas abas de exemplo
+            setTimeout(() => {
+                const container = document.querySelector('.container');
+                if (container) {
+                    const newTabButton = document.createElement('button');
+                    newTabButton.className = 'btn btn-outline-success btn-sm ms-2';
+                    newTabButton.innerHTML = '<i class="fas fa-plus"></i> Nova Aba';
+                    newTabButton.onclick = () => openNewTab('Aba ' + (tabManager.tabs.size + 1), '/example');
+                    
+                    const backButton = container.querySelector('.btn-outline-primary');
+                    if (backButton) {
+                        backButton.parentNode.insertBefore(newTabButton, backButton.nextSibling);
+                    }
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

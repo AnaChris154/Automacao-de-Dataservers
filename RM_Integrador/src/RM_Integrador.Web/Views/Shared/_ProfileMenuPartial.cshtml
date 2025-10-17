@@ -1,0 +1,74 @@
+@using Microsoft.AspNetCore.Identity
+
+<style>
+    .profile-menu {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .profile-icon {
+        transition: transform 0.2s;
+    }
+    
+    .profile-dropdown:hover .profile-icon {
+        transform: scale(1.1);
+    }
+    
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+<nav class="navbar navbar-expand navbar-light bg-white profile-menu" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 100;">
+    <div class="container-fluid">
+        <span class="navbar-brand">
+            <i class="bi bi-database-check text-primary me-2"></i>
+            Sistema de Automação DataServer BH
+        </span>
+        
+        <div class="dropdown profile-dropdown">
+            <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" 
+               id="perfilDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="me-2 d-none d-md-block">
+                    <small class="d-block text-muted">Bem-vindo(a),</small>
+                    <span class="fw-bold text-primary">@User.Identity?.Name</span>
+                </span>
+                <span class="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center profile-icon" 
+                      style="width: 40px; height: 40px;">
+                    <i class="bi bi-person-fill" style="font-size: 1.2rem;"></i>
+                </span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="perfilDropdown">
+                <li>
+                    <a class="dropdown-item" href="#" onclick="alertEmDesenvolvimento()">
+                        <i class="bi bi-person-circle"></i>
+                        Meu Perfil
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form method="post" action="@Url.Action("Logout", "Account")" style="margin: 0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="bi bi-box-arrow-right"></i>
+                            Sair
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+<div style="height: 60px;"></div>
+
+<script>
+    function alertEmDesenvolvimento() {
+        alert('Funcionalidade em desenvolvimento!');
+    }
+</script>

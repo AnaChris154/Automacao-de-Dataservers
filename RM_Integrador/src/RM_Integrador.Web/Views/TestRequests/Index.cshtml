@@ -1,0 +1,1451 @@
+@{
+    ViewData["Title"] = "Teste de Requisições";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Requisições - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/spinner.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .json-display {
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .loading-text {
+            display: none;
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        /* Success/Error messages */
+        .alert {
+            position: relative;
+            z-index: 2;
+            padding: 0.75rem 1.25rem;
+        }
+
+        /* Estilo para campos de chaves primárias */
+        .primary-key-input {
+            border-left: 4px solid #007bff;
+        }
+
+        .primary-key-input:focus {
+            border-left-color: #0056b3;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .json-preparation-area {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+
+        #prepared-json {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            border: 2px solid #dee2e6;
+        }
+
+        #prepared-json:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/User/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <h2>Teste de Requisições para DataServers</h2>
+    
+    <!-- Alert container for success/error messages -->
+    <div id="alert-container"></div>
+
+    <!-- Loading indicator -->
+    <div id="loading-container" class="text-center" style="display: none;">
+        <div class="spinner request-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+        <div class="loading-text">Processando requisição...</div>
+    </div>
+
+    <!-- Status da conexão RM -->
+    <div id="rm-connection-status" class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Detectando RM local...
+    </div>
+
+    <!-- Informações de Ambiente -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-server"></i> Informações do Ambiente</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Ambiente:</strong> <span id="env-environment" class="badge bg-secondary">Carregando...</span></p>
+                    <p><strong>RM Local Disponível:</strong> <span id="env-local-rm">-</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>URL Atual do RM:</strong> <br><small id="env-current-url" class="text-break">-</small></p>
+                    <p><strong>Portas Disponíveis:</strong> <span id="env-ports">-</span></p>
+                </div>
+            </div>
+            <div class="text-end">
+                <a href="/Environment" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-cog"></i> Configurações Avançadas
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configurações de Execução -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-cogs"></i> Configurações de Execução</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Modo de Execução:</label>
+                    <select id="executionMode" class="form-select">
+                        <option value="auto">🔄 Automático (Detectar melhor opção)</option>
+                        <option value="local">🏠 Forçar RM Local</option>
+                        <option value="server">🌐 Apenas Servidor</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Ações:</label>
+                    <div class="d-flex gap-2">
+                        <button id="redetectRMBtn" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-sync"></i> Re-detectar RM
+                        </button>
+                        <button id="showRMStatusBtn" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-info"></i> Status
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#rmCredentialsModal">
+                            <i class="fas fa-key"></i> Credenciais
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataServer Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-database"></i> Seleção do DataServer</h5>
+        </div>
+        <div class="card-body">
+            <div class="input-group">
+                <input type="text" id="dataServerInput" class="form-control" placeholder="Nome do DataServer">
+                <button id="selectDataServerBtn" class="btn btn-primary" type="button">Buscar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DataServer Info -->
+    <div id="dataServerInfo" style="display: none;" class="alert alert-success">
+        <!-- Informações do DataServer serão exibidas aqui -->
+    </div>
+
+    <!-- Operation Type Selection -->
+    <div id="operationTypeSection" style="display: none;" class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-tools"></i> Tipo de Operação</h5>
+        </div>
+        <div class="card-body">
+            <p>Escolha o tipo de operação para o DataServer selecionado:</p>
+            <div class="d-flex gap-3">
+                <button id="showGetOptionsBtn" class="btn btn-info btn-lg">
+                    <i class="fas fa-download me-2"></i> GET - Consultar Dados
+                </button>
+                <button id="showPostOptionsBtn" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload me-2"></i> POST - Enviar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Operations Section -->
+    <div id="operationsSection" style="display: none;">
+        <!-- GET Options -->
+        <div id="getOptions" style="display: none;" class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-download"></i> Configurações GET</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="getFilter" class="form-label">Filtro ou ID específico:</label>
+                    <input type="text" id="getFilter" class="form-control" placeholder="Ex: 1$_$00001 (ID específico) ou name=teste (filtro)">
+                    <div class="form-text">
+                        <small>
+                            <strong>ID específico:</strong> Use IDs como "1$_$00001" para acessar um registro específico.<br>
+                            <strong>Filtro:</strong> Use "campo=valor" para filtrar resultados.
+                        </small>
+                    </div>
+                </div>
+                <button class="btn btn-info" onclick="executeGet()">Executar GET</button>
+            </div>
+        </div>
+
+        <!-- POST Options -->
+        <div id="postOptions" style="display: none;" class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-upload"></i> Configurações POST</h5>
+            </div>
+            <div class="card-body">
+                <p>Escolha como deseja preparar os dados para envio:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="preparePost()">📋 Preparar JSON</button>
+                </div>
+                <small class="text-muted">Use o modo "Preparar JSON" para construir o JSON de forma assistida.</small>
+            </div>
+        </div>
+
+        <!-- JSON Preparation Area -->
+        <div id="jsonPreparationArea" style="display: none;" class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-code"></i> Preparação do JSON</h5>
+                <div>
+                    <button class="btn btn-success" onclick="sendPreparedJson()">
+                        <i class="fas fa-paper-plane"></i> Enviar JSON
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="saveJsonLocally()">
+                        <i class="fas fa-save"></i> Salvar JSON
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="formatJsonInTextarea()">
+                        <i class="fas fa-magic"></i> Formatar
+                    </button>
+                    <button class="btn btn-outline-warning" onclick="goBackToKeys()">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="json-inputs-container">
+                    <!-- Inputs de chaves serão gerados aqui -->
+                </div>
+                <div class="mt-3">
+                    <label for="prepared-json" class="form-label">JSON Final:</label>
+                    <textarea id="prepared-json" class="form-control" rows="10" placeholder="O JSON preparado aparecerá aqui..."></textarea>
+                    <div class="mt-2">
+                        <button class="btn btn-outline-info btn-sm" onclick="testTextareaContent()">
+                            <i class="fas fa-eye"></i> Testar Conteúdo da Textarea
+                        </button>
+                        <button class="btn btn-outline-warning btn-sm" onclick="validateJsonForDataServer()">
+                            <i class="fas fa-check-circle"></i> Validar JSON para DataServer
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="copyJsonToClipboard()">
+                            <i class="fas fa-copy"></i> Copiar JSON
+                        </button>
+                        <button class="btn btn-outline-success btn-sm" onclick="testJsonInPostman()">
+                            <i class="fas fa-external-link-alt"></i> Instruções Postman
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultSection" style="display: none;" class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5><i class="fas fa-chart-line"></i> Resultado da Requisição</h5>
+            <div>
+                <button class="btn btn-outline-primary" onclick="backToMain()">
+                    <i class="fas fa-home"></i> Nova Consulta
+                </button>
+                <button class="btn btn-outline-secondary" onclick="saveResult()">
+                    <i class="fas fa-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="result" class="json-display border p-3 bg-light">
+                <!-- Resultado será exibido aqui -->
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Modal para Configuração de Credenciais RM Local -->
+    <div class="modal fade" id="rmCredentialsModal" tabindex="-1" aria-labelledby="rmCredentialsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rmCredentialsModalLabel">
+                        <i class="fas fa-key"></i> Configurar Credenciais RM Local
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rmUsername" class="form-label">Usuário:</label>
+                        <input type="text" class="form-control" id="rmUsername" placeholder="Nome de usuário do RM">
+                    </div>
+                    <div class="mb-3">
+                        <label for="rmPassword" class="form-label">Senha:</label>
+                        <input type="password" class="form-control" id="rmPassword" placeholder="Senha do RM">
+                    </div>
+                    <div class="mb-3">
+                        <label for="rmCodColigada" class="form-label">Código da Coligada:</label>
+                        <input type="number" class="form-control" id="rmCodColigada" value="1" min="1">
+                    </div>
+                    <div class="text-end mb-3">
+                        <button type="button" class="btn btn-outline-primary" onclick="testRMCredentials()">
+                            <i class="fas fa-check"></i> Testar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearRMCredentials()">
+                            <i class="fas fa-trash"></i> Limpar
+                        </button>
+                    </div>
+                    <div id="credentialsTestResult"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRMCredentials()">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Função para detectar RM local no browser do usuário
+        async function detectLocalRMInBrowser() {
+            const ports = [8051, 8052, 8053];
+            
+            for (const port of ports) {
+                try {
+                    const url = `http://localhost:${port}/rmsrestdataserver/rest`;
+                    console.log(`Tentando detectar RM local em: ${url}`);
+                    
+                    // Usar uma requisição simples para testar conectividade
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 2000);
+                    
+                    // Testa com um endpoint mais simples
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        signal: controller.signal,
+                        mode: 'cors', // Permite verificar resposta adequadamente
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    // Se chegou até aqui sem erro, o RM está acessível
+                    console.log(`RM local detectado em: ${url} - Status: ${response.status}`);
+                    return url;
+                    
+                } catch (error) {
+                    console.log(`RM não encontrado na porta ${port}: ${error.message}`);
+                    // Se o erro não for de timeout/abort, pode ser que o serviço não esteja rodando
+                    if (error.name === 'AbortError') {
+                        console.log(`Timeout na porta ${port}`);
+                    }
+                }
+            }
+            
+            console.log('Nenhum RM local detectado');
+            return null;
+        }
+
+        // Função para mostrar alertas
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alert-container');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" id="${alertId}" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" onclick="closeAlert('${alertId}')"></button>
+                </div>
+            `;
+            
+            alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-remove após 5 segundos
+            setTimeout(() => {
+                closeAlert(alertId);
+            }, 5000);
+        }
+
+        // Função para fechar alertas
+        function closeAlert(alertId) {
+            const alert = document.getElementById(alertId);
+            if (alert) {
+                alert.remove();
+            }
+        }
+
+        // Função para carregar informações do ambiente
+        async function loadEnvironmentInfo() {
+            try {
+                const response = await fetch('/TestRequests/GetEnvironmentInfo');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const info = data.data;
+                    document.getElementById('env-environment').textContent = info.environment || 'Desenvolvimento';
+                    document.getElementById('env-local-rm').textContent = info.hasLocalRM ? 'Sim' : 'Não';
+                    document.getElementById('env-current-url').textContent = info.currentRMUrl || 'Não detectado';
+                    document.getElementById('env-ports').textContent = info.availablePorts?.join(', ') || 'Nenhuma';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar informações do ambiente:', error);
+            }
+        }
+
+        // Função para detectar RM local/remoto
+        async function redetectRM() {
+            const statusElement = document.getElementById('rm-connection-status');
+            statusElement.className = 'alert alert-info';
+            statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Detectando RM...';
+            
+            try {
+                const response = await fetch('/TestRequests/DetectRM');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const rmInfo = data.data;
+                    let statusClass = 'alert-success';
+                    let icon = 'fas fa-check-circle';
+                    let message = '';
+                    
+                    if (rmInfo.isLocal) {
+                        message = `<i class="${icon}"></i> RM Local detectado na porta ${rmInfo.port}`;
+                    } else {
+                        message = `<i class="${icon}"></i> Usando RM Remoto: ${rmInfo.remoteUrl}`;
+                    }
+                    
+                    statusElement.className = `alert ${statusClass}`;
+                    statusElement.innerHTML = message;
+                    
+                    // Atualiza informações do ambiente
+                    if (rmInfo.isLocal !== undefined) {
+                        document.getElementById('env-local-rm').textContent = rmInfo.isLocal ? 'Sim' : 'Não';
+                    }
+                } else {
+                    statusElement.className = 'alert alert-warning';
+                    statusElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.message}`;
+                }
+            } catch (error) {
+                statusElement.className = 'alert alert-danger';
+                statusElement.innerHTML = '<i class="fas fa-times-circle"></i> Erro ao detectar RM: ' + error.message;
+            }
+        }
+
+        function showRMStatus() {
+            // Implementar lógica para mostrar status detalhado do RM
+            alert('Função de status do RM será implementada');
+        }
+
+        // Função para selecionar DataServer
+        async function selectDataServer() {
+            const term = document.getElementById('dataServerInput').value;
+            if (!term || term.trim() === '') {
+                alert('Digite o nome do DataServer');
+                return;
+            }
+            
+            console.log('Buscando DataServer:', term);
+            
+            try {
+                const response = await fetch(`/User/BuscarJsonsExemplos?dataServerName=${encodeURIComponent(term)}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('DataServer encontrado:', data.data);
+                    
+                    // Exibe informações do DataServer
+                    const infoDiv = document.getElementById('dataServerInfo');
+                    infoDiv.innerHTML = `
+                        <strong>DataServer encontrado:</strong> ${term}<br>
+                        <small>Clique em uma das opções abaixo para continuar.</small>
+                    `;
+                    infoDiv.style.display = 'block';
+                    
+                    // Mostra as opções de operação
+                    document.getElementById('operationTypeSection').style.display = 'block';
+                    
+                    // Armazena os dados para uso posterior - usando o termo pesquisado como nome
+                    window.selectedDataServer = {
+                        name: term,
+                        data: data.data
+                    };
+                    
+                    console.log('DataServer salvo:', window.selectedDataServer);
+                    
+                    alert('DataServer encontrado com sucesso!');
+                } else {
+                    alert(data.message || 'DataServer não encontrado');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar DataServer:', error);
+                alert('Erro ao buscar DataServer: ' + error.message);
+            }
+        }
+
+        // Função para mostrar opções GET
+        function showGetOptions() {
+            console.log('Mostrando opções GET');
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            document.getElementById('operationsSection').style.display = 'block';
+            document.getElementById('getOptions').style.display = 'block';
+            document.getElementById('postOptions').style.display = 'none';
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+        }
+
+        // Função para mostrar opções POST
+        function showPostOptions() {
+            console.log('Mostrando opções POST');
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            document.getElementById('operationsSection').style.display = 'block';
+            document.getElementById('getOptions').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+        }
+
+        // Função para executar GET
+        async function executeGet() {
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            console.log('Executando GET para:', window.selectedDataServer);
+            
+            const filter = document.getElementById('getFilter').value;
+            const dataServerName = window.selectedDataServer.name;
+            const executionMode = document.getElementById('executionMode').value;
+            
+            console.log('Nome do DataServer:', dataServerName);
+            console.log('Filtro:', filter);
+            console.log('Modo de execução:', executionMode);
+            
+            if (!dataServerName) {
+                alert('Nome do DataServer não está definido');
+                return;
+            }
+            
+            try {
+                document.getElementById('loading-container').style.display = 'block';
+                
+                // Se for modo local, tentar detectar RM local no browser do usuário
+                let actualExecutionMode = executionMode;
+                let localRMUrl = null;
+                
+                if (executionMode === 'local') {
+                    console.log('🔍 Detectando RM local no browser do usuário...');
+                    showAlert('🔍 Detectando RM local no seu computador...', 'info');
+                    localRMUrl = await detectLocalRMInBrowser();
+                    
+                    if (!localRMUrl) {
+                        document.getElementById('loading-container').style.display = 'none';
+                        showAlert('❌ RM local não detectado no seu computador. Verifique se o RM está executando localmente nas portas 8051, 8052 ou 8053.', 'danger');
+                        return;
+                    }
+                    
+                    console.log('✅ RM local detectado:', localRMUrl);
+                    showAlert(`✅ RM local detectado: ${localRMUrl}`, 'success');
+                } else {
+                    console.log('🌐 Modo remoto selecionado - usando servidor configurado');
+                    showAlert('🌐 Usando RM remoto (servidor)', 'info');
+                }
+                
+                const requestData = {
+                    dataServerName: dataServerName,
+                    filter: filter || '',
+                    executionMode: actualExecutionMode,
+                    localRMUrl: localRMUrl // Passa a URL do RM local detectado
+                };
+                
+                console.log('Dados da requisição:', requestData);
+                
+                const response = await fetch('/TestRequests/ExecuteGet', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                console.log('Resposta da API:', data);
+                
+                document.getElementById('loading-container').style.display = 'none';
+                
+                if (data.success) {
+                    document.getElementById('resultSection').style.display = 'block';
+                    
+                    // Formatação melhorada do JSON
+                    let formattedData = data.data;
+                    try {
+                        // Se data.data é uma string JSON, parse e reformate
+                        if (typeof data.data === 'string') {
+                            const parsedData = JSON.parse(data.data);
+                            formattedData = JSON.stringify(parsedData, null, 2);
+                        } else {
+                            // Se já é objeto, apenas stringify com formatação
+                            formattedData = JSON.stringify(data.data, null, 2);
+                        }
+                    } catch (e) {
+                        // Se falhar, usa o valor original
+                        formattedData = data.data;
+                    }
+                    
+                    document.getElementById('result').innerHTML = `<pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #dee2e6;">${formattedData}</pre>`;
+                    
+                    // Mostra qual URL foi usada com informações detalhadas
+                    let urlInfo = '';
+                    if (data.executionDetails) {
+                        urlInfo = ` | ${data.executionDetails}`;
+                    } else if (data.usedUrl && data.executionMode) {
+                        const modeText = data.executionMode === 'local' ? 'RM Local' : 'RM Remoto';
+                        urlInfo = ` | ${modeText}: ${data.usedUrl}`;
+                    } else if (data.usedUrl) {
+                        urlInfo = ` | URL: ${data.usedUrl}`;
+                    }
+                    
+                    showAlert(`✅ Requisição GET executada com sucesso!${urlInfo}`, 'success');
+                } else {
+                    showAlert('Erro na requisição GET: ' + (data.message || data.error || 'Erro desconhecido'), 'danger');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                document.getElementById('loading-container').style.display = 'none';
+                showAlert('Erro na requisição GET: ' + error.message, 'danger');
+            }
+        }
+
+        // Função para executar POST
+        async function executePost() {
+            if (!window.selectedDataServer) {
+                alert('Primeiro selecione um DataServer');
+                return;
+            }
+            
+            console.log('Executando POST para:', window.selectedDataServer);
+            
+            const requestBody = document.getElementById('postBody').value;
+            const dataServerName = window.selectedDataServer.name;
+            
+            console.log('Nome do DataServer:', dataServerName);
+            console.log('Body:', requestBody);
+            
+            if (!dataServerName) {
+                alert('Nome do DataServer não está definido');
+                return;
+            }
+            
+            if (!requestBody) {
+                alert('Digite o JSON para enviar');
+                return;
+            }
+            
+            try {
+                JSON.parse(requestBody);
+            } catch (e) {
+                alert('JSON inválido');
+                return;
+            }
+            
+            try {
+                document.getElementById('loading-container').style.display = 'block';
+                
+                // Obter o modo de execução
+                const executionMode = document.getElementById('executionMode').value;
+                
+                const url = `/User/TestePOST?dataServerName=${encodeURIComponent(dataServerName)}&executionMode=${encodeURIComponent(executionMode)}`;
+                console.log('URL da requisição:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: requestBody
+                });
+                
+                const data = await response.json();
+                
+                console.log('Resposta da API:', data);
+                
+                document.getElementById('loading-container').style.display = 'none';
+                
+                if (data.success) {
+                    document.getElementById('resultSection').style.display = 'block';
+                    let displayHtml = `<pre>${data.data}</pre>`;
+                    if (data.url) {
+                        displayHtml = `<div class="mb-3"><strong>URL utilizada:</strong> ${data.url}</div>` + displayHtml;
+                    }
+                    document.getElementById('result').innerHTML = displayHtml;
+                    showAlert('Requisição POST executada com sucesso!', 'success');
+                } else {
+                    showAlert('Erro na requisição POST: ' + data.message, 'danger');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                document.getElementById('loading-container').style.display = 'none';
+                showAlert('Erro na requisição POST: ' + error.message, 'danger');
+            }
+        }
+
+        // Função para preparar POST (nova funcionalidade)
+        async function preparePost() {
+            if (!window.selectedDataServer) {
+                showAlert('Primeiro selecione um DataServer', 'danger');
+                return;
+            }
+            
+            console.log('Preparando POST para:', window.selectedDataServer);
+            
+            try {
+                // Busca informações detalhadas do DataServer incluindo chaves primárias
+                const response = await fetch(`/TestRequests/GetDataServerInfo?dataServerName=${encodeURIComponent(window.selectedDataServer.name)}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const dataServerInfo = result.data;
+                    console.log('Informações do DataServer:', dataServerInfo);
+                    
+                    // Armazena as informações detalhadas
+                    window.selectedDataServer.info = dataServerInfo;
+                    
+                    // Mostra a área de preparação
+                    document.getElementById('postOptions').style.display = 'none';
+                    document.getElementById('jsonPreparationArea').style.display = 'block';
+                    
+                    // Gera os inputs para as chaves primárias
+                    generateJsonKeyInputs(dataServerInfo.primaryKeys, dataServerInfo.postExample);
+                } else {
+                    showAlert('Erro ao buscar informações do DataServer: ' + result.error, 'danger');
+                }
+            } catch (error) {
+                console.error('Erro ao preparar POST:', error);
+                showAlert('Erro ao preparar POST: ' + error.message, 'danger');
+            }
+        }
+
+        // Funções para credenciais RM
+        function testRMCredentials() {
+            showAlert('Teste de credenciais RM (simulado)', 'info');
+        }
+
+        function clearRMCredentials() {
+            document.getElementById('rmUsername').value = '';
+            document.getElementById('rmPassword').value = '';
+            document.getElementById('rmCodColigada').value = '1';
+            showAlert('Credenciais removidas', 'info');
+        }
+
+        function saveRMCredentials() {
+            showAlert('Credenciais salvas com sucesso!', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('rmCredentialsModal'));
+            if (modal) modal.hide();
+        }
+
+        // Outras funções simplificadas...
+        function generateJsonKeyInputs(primaryKeys, postExample) {
+            const container = document.getElementById('json-inputs-container');
+            
+            if (!primaryKeys || primaryKeys.length === 0) {
+                container.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Nenhuma chave primária definida para este DataServer.
+                        <br><small>Você pode inserir o JSON manualmente na área abaixo.</small>
+                    </div>
+                `;
+                
+                // Se há exemplo, coloca direto no textarea
+                if (postExample) {
+                    document.getElementById('prepared-json').value = formatJSON(postExample);
+                }
+                return;
+            }
+            
+            let html = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Preencha os valores para as chaves primárias do DataServer <strong>${window.selectedDataServer.name}</strong>
+                    <br><small>Os valores serão automaticamente mesclados com o JSON de exemplo do banco de dados.</small>
+                </div>
+                <div class="json-preparation-area">
+                    <h6><i class="fas fa-key"></i> Chaves Primárias</h6>
+                    <div class="row">
+            `;
+            
+            primaryKeys.forEach((key, index) => {
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <label for="key-${index}" class="form-label">
+                            <strong>${key}</strong>
+                            <span class="text-muted">(chave ${index + 1})</span>
+                        </label>
+                        <input type="text" 
+                               id="key-${index}" 
+                               class="form-control primary-key-input" 
+                               data-key="${key}" 
+                               placeholder="Digite o valor para ${key}"
+                               onkeyup="updateJsonFromInputs()"
+                               onfocus="this.style.borderLeftColor='#0056b3'"
+                               onblur="this.style.borderLeftColor='#007bff'">
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-outline-primary me-2" onclick="generateJsonFromKeys()">
+                            <i class="fas fa-magic"></i> Atualizar JSON
+                        </button>
+                        ${postExample ? `
+                        <button class="btn btn-outline-secondary me-2" onclick="resetToExample()">
+                            <i class="fas fa-undo"></i> Resetar ao Exemplo
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-outline-info" onclick="clearAllInputs()">
+                            <i class="fas fa-eraser"></i> Limpar Campos
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Armazena o exemplo para uso posterior
+            if (postExample) {
+                window.currentPostExample = postExample;
+                // Carrega automaticamente o JSON de exemplo na textarea
+                document.getElementById('prepared-json').value = formatJSON(postExample);
+                showAlert('JSON de exemplo carregado! Preencha as chaves primárias para personalizar.', 'info');
+            }
+        }
+
+        function sendPreparedJson() {
+            console.log('=== sendPreparedJson START ===');
+            
+            const jsonTextarea = document.getElementById('prepared-json');
+            console.log('Elemento prepared-json encontrado:', jsonTextarea);
+            console.log('Textarea existe:', jsonTextarea !== null);
+            
+            if (!jsonTextarea) {
+                showAlert('Elemento de textarea não encontrado!', 'danger');
+                console.error('Elemento #prepared-json não foi encontrado no DOM');
+                return;
+            }
+            
+            const jsonText = jsonTextarea.value;
+            console.log('JSON Text Raw:', JSON.stringify(jsonText));
+            console.log('JSON Text:', jsonText);
+            console.log('JSON Length:', jsonText ? jsonText.length : 0);
+            console.log('JSON Trim Length:', jsonText ? jsonText.trim().length : 0);
+            
+            if (!jsonText || jsonText.trim() === '') {
+                showAlert('Digite o JSON para enviar', 'warning');
+                console.warn('JSON está vazio ou só contém espaços em branco');
+                return;
+            }
+            
+            // Valida se é um JSON válido
+            let parsedJson;
+            try {
+                parsedJson = JSON.parse(jsonText);
+                console.log('JSON Parsed successfully:', parsedJson);
+                console.log('JSON stringified back:', JSON.stringify(parsedJson));
+                
+                // Validações específicas para o DataServer
+                if (!window.selectedDataServer?.info?.primaryKeys || window.selectedDataServer.info.primaryKeys.length === 0) {
+                    console.log('Nenhuma chave primária definida, enviando JSON como está');
+                } else {
+                    // Verifica se pelo menos uma chave primária foi preenchida
+                    const primaryKeys = window.selectedDataServer.info.primaryKeys;
+                    const hasAtLeastOneKey = primaryKeys.some(key => parsedJson.hasOwnProperty(key) && parsedJson[key] !== null && parsedJson[key] !== '');
+                    
+                    if (!hasAtLeastOneKey) {
+                        showAlert('ATENÇÃO: Nenhuma chave primária foi preenchida. Isso pode causar erro no RM.', 'warning');
+                        if (!confirm('Deseja continuar mesmo assim?')) {
+                            return;
+                        }
+                    }
+                    
+                    console.log('Chaves primárias presentes no JSON:', primaryKeys.filter(key => parsedJson.hasOwnProperty(key)));
+                }
+                
+            } catch (error) {
+                showAlert('JSON inválido: ' + error.message, 'danger');
+                console.error('JSON Parse Error:', error);
+                return;
+            }
+            
+            // Log final do que será enviado
+            console.log('=== DADOS FINAIS PARA ENVIO ===');
+            console.log('DataServer:', window.selectedDataServer?.name);
+            console.log('JSON Final:', JSON.stringify(parsedJson, null, 2));
+            console.log('Tamanho final:', JSON.stringify(parsedJson).length, 'caracteres');
+            
+            console.log('Chamando executePostWithJson...');
+            // Executa o POST
+            executePostWithJson(jsonText);
+        }
+
+        function formatJsonInTextarea() {
+            const textarea = document.getElementById('prepared-json');
+            const jsonText = textarea.value;
+            
+            if (!jsonText || jsonText.trim() === '') {
+                showAlert('Nenhum JSON para formatar', 'warning');
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(jsonText);
+                textarea.value = JSON.stringify(parsed, null, 2);
+                showAlert('JSON formatado com sucesso!', 'success');
+            } catch (error) {
+                showAlert('Erro ao formatar JSON: ' + error.message, 'danger');
+            }
+        }
+
+        function updateJsonFromInputs() {
+            // Atualiza o JSON automaticamente quando o usuário digita
+            clearTimeout(window.updateJsonTimeout);
+            window.updateJsonTimeout = setTimeout(() => {
+                generateJsonFromKeys();
+            }, 500); // Debounce de 500ms para melhor performance
+        }
+
+        function generateJsonFromKeys() {
+            const inputs = document.querySelectorAll('.primary-key-input');
+            const userValues = {};
+            
+            // Coleta os valores inseridos pelo usuário
+            inputs.forEach(input => {
+                const key = input.getAttribute('data-key');
+                const value = input.value.trim();
+                if (value) {
+                    // Mantém como string para preservar zeros à esquerda e formatação
+                    // Só converte para número se não começar com zero ou não contém pontos/vírgulas
+                    if (value.startsWith('0') || value.includes('.') || value.includes(',')) {
+                        userValues[key] = value; // Mantém como string
+                    } else {
+                        userValues[key] = isNaN(value) ? value : Number(value);
+                    }
+                }
+            });
+            
+            console.log('Valores do usuário:', userValues);
+            
+            // Se há JSON de exemplo, mescla com os valores do usuário
+            if (window.currentPostExample) {
+                try {
+                    // Parse do JSON exemplo
+                    const exampleJson = typeof window.currentPostExample === 'string' ? 
+                        JSON.parse(window.currentPostExample) : 
+                        window.currentPostExample;
+                    
+                    console.log('JSON exemplo:', exampleJson);
+                    
+                    // Mescla os valores do usuário com o exemplo
+                    const mergedJson = { ...exampleJson, ...userValues };
+                    
+                    console.log('JSON mesclado:', mergedJson);
+                    
+                    const jsonText = JSON.stringify(mergedJson, null, 2);
+                    document.getElementById('prepared-json').value = jsonText;
+                    
+                    if (Object.keys(userValues).length > 0) {
+                        showAlert(`JSON gerado mesclando ${Object.keys(userValues).length} chave(s) primária(s) com o exemplo!`, 'success');
+                    } else {
+                        showAlert('JSON de exemplo carregado! Preencha as chaves primárias para personalizar.', 'info');
+                    }
+                    
+                } catch (error) {
+                    console.error('Erro ao mesclar JSON:', error);
+                    // Se der erro, usa apenas os valores do usuário
+                    const jsonText = JSON.stringify(userValues, null, 2);
+                    document.getElementById('prepared-json').value = jsonText;
+                    showAlert('Erro ao mesclar com exemplo. Usando apenas as chaves informadas.', 'warning');
+                }
+            } else {
+                // Se não há exemplo, usa apenas os valores do usuário
+                const jsonText = JSON.stringify(userValues, null, 2);
+                document.getElementById('prepared-json').value = jsonText;
+                
+                if (Object.keys(userValues).length > 0) {
+                    showAlert('JSON gerado das chaves primárias!', 'success');
+                } else {
+                    showAlert('Preencha pelo menos uma chave primária.', 'warning');
+                }
+            }
+        }
+
+        function useExampleJson() {
+            if (window.currentPostExample) {
+                document.getElementById('prepared-json').value = formatJSON(window.currentPostExample);
+                showAlert('JSON de exemplo recarregado! Preencha as chaves primárias para personalizar.', 'info');
+            } else {
+                showAlert('Nenhum exemplo disponível para este DataServer', 'warning');
+            }
+        }
+
+        function resetToExample() {
+            // Limpa todos os campos de input
+            const inputs = document.querySelectorAll('.primary-key-input');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Recarrega o JSON de exemplo
+            if (window.currentPostExample) {
+                document.getElementById('prepared-json').value = formatJSON(window.currentPostExample);
+                showAlert('Campos limpos e JSON resetado para o exemplo!', 'info');
+            }
+        }
+
+        function clearAllInputs() {
+            const inputs = document.querySelectorAll('.primary-key-input');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Se há exemplo, volta para o exemplo. Se não, limpa tudo
+            if (window.currentPostExample) {
+                document.getElementById('prepared-json').value = formatJSON(window.currentPostExample);
+                showAlert('Campos de chaves primárias limpos! JSON mantido como exemplo.', 'info');
+            } else {
+                document.getElementById('prepared-json').value = '';
+                showAlert('Todos os campos limpos!', 'info');
+            }
+        }
+
+        async function executePostWithJson(jsonData) {
+            console.log('=== executePostWithJson START ===');
+            
+            if (!window.selectedDataServer) {
+                showAlert('DataServer não selecionado', 'danger');
+                console.error('selectedDataServer não está definido');
+                return;
+            }
+            
+            console.log('DataServer Object:', window.selectedDataServer);
+            console.log('DataServer Name:', window.selectedDataServer.name);
+            console.log('JSON Data Type:', typeof jsonData);
+            console.log('JSON Data:', jsonData);
+            console.log('JSON Length:', jsonData ? jsonData.length : 0);
+            console.log('JSON Raw (escaped):', JSON.stringify(jsonData));
+            
+            if (!jsonData || jsonData.trim() === '') {
+                showAlert('JSON está vazio! Preencha os campos ou use o exemplo.', 'danger');
+                console.error('JSON data está vazio após trim');
+                return;
+            }
+            
+            try {
+                document.getElementById('loading-container').style.display = 'block';
+                
+                // Obter o modo de execução
+                const executionMode = document.getElementById('executionMode').value;
+                
+                // Se for modo local, tentar detectar RM local no browser do usuário
+                let localRMUrl = null;
+                
+                if (executionMode === 'local') {
+                    console.log('🔍 Detectando RM local no browser do usuário para POST...');
+                    showAlert('🔍 Detectando RM local no seu computador...', 'info');
+                    localRMUrl = await detectLocalRMInBrowser();
+                    
+                    if (!localRMUrl) {
+                        document.getElementById('loading-container').style.display = 'none';
+                        showAlert('❌ RM local não detectado no seu computador. Verifique se o RM está executando localmente nas portas 8051, 8052 ou 8053.', 'danger');
+                        return;
+                    }
+                    
+                    console.log('✅ RM local detectado para POST:', localRMUrl);
+                    showAlert(`✅ RM local detectado: ${localRMUrl}`, 'success');
+                } else {
+                    console.log('🌐 Modo remoto selecionado para POST - usando servidor configurado');
+                    showAlert('🌐 Usando RM remoto (servidor)', 'info');
+                }
+                
+                // Preparar dados para o novo endpoint
+                const requestData = {
+                    dataServerName: window.selectedDataServer.name,
+                    postData: JSON.parse(jsonData), // Converter string para objeto JSON
+                    executionMode: executionMode,
+                    localRMUrl: localRMUrl
+                };
+                
+                console.log('Dados da requisição POST:', requestData);
+                
+                const response = await fetch('/TestRequests/ExecutePost', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                const result = await response.json();
+                
+                console.log('Resposta da API:', result);
+                
+                document.getElementById('loading-container').style.display = 'none';
+                
+                if (result.success) {
+                    document.getElementById('resultSection').style.display = 'block';
+                    
+                    // Formatação melhorada do JSON
+                    let formattedData = result.data;
+                    try {
+                        // Se result.data é uma string JSON, parse e reformate
+                        if (typeof result.data === 'string') {
+                            const parsedData = JSON.parse(result.data);
+                            formattedData = JSON.stringify(parsedData, null, 2);
+                        } else {
+                            // Se já é objeto, apenas stringify com formatação
+                            formattedData = JSON.stringify(result.data, null, 2);
+                        }
+                    } catch (e) {
+                        // Se falhar, usa o valor original
+                        formattedData = result.data;
+                    }
+                    
+                    let displayHtml = `<pre style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #dee2e6;">${formattedData}</pre>`;
+                    
+                    // Mostra qual URL foi usada com informações detalhadas
+                    let urlInfo = '';
+                    if (result.executionDetails) {
+                        urlInfo = ` | ${result.executionDetails}`;
+                        displayHtml = `<div class="mb-3 alert alert-info"><strong>📍 Conexão utilizada:</strong> ${result.executionDetails}</div>` + displayHtml;
+                    } else if (result.usedUrl && result.executionMode) {
+                        const modeText = result.executionMode === 'local' ? 'RM Local' : 'RM Remoto';
+                        urlInfo = ` | ${modeText}: ${result.usedUrl}`;
+                        displayHtml = `<div class="mb-3 alert alert-info"><strong>📍 URL utilizada:</strong> ${result.usedUrl} (${modeText})</div>` + displayHtml;
+                    } else if (result.usedUrl || result.url) {
+                        const url = result.usedUrl || result.url;
+                        urlInfo = ` | URL: ${url}`;
+                        displayHtml = `<div class="mb-3 alert alert-info"><strong>📍 URL utilizada:</strong> ${url}</div>` + displayHtml;
+                    }
+                    
+                    document.getElementById('result').innerHTML = displayHtml;
+                    showAlert(`✅ Requisição POST executada com sucesso!${urlInfo}`, 'success');
+                } else {
+                    showAlert('Erro na requisição POST: ' + (result.message || result.error || 'Erro desconhecido'), 'danger');
+                }
+            } catch (error) {
+                console.error('Erro na requisição POST:', error);
+                document.getElementById('loading-container').style.display = 'none';
+                showAlert('Erro na requisição POST: ' + error.message, 'danger');
+            }
+        }
+
+        function goBackToKeys() {
+            document.getElementById('jsonPreparationArea').style.display = 'none';
+            document.getElementById('postOptions').style.display = 'block';
+        }
+
+        function testTextareaContent() {
+            console.log('=== TESTE TEXTAREA ===');
+            const textarea = document.getElementById('prepared-json');
+            console.log('Elemento:', textarea);
+            console.log('Value:', textarea ? textarea.value : 'ELEMENTO NÃO ENCONTRADO');
+            console.log('Value length:', textarea ? textarea.value.length : 0);
+            console.log('Value trimmed length:', textarea ? textarea.value.trim().length : 0);
+            
+            if (textarea && textarea.value) {
+                showAlert(`Textarea contém ${textarea.value.length} caracteres (${textarea.value.trim().length} sem espaços)`, 'info');
+            } else {
+                showAlert('Textarea está vazia ou não foi encontrada!', 'warning');
+            }
+        }
+
+        function validateJsonForDataServer() {
+            const textarea = document.getElementById('prepared-json');
+            if (!textarea || !textarea.value) {
+                showAlert('Nenhum JSON para validar!', 'warning');
+                return;
+            }
+
+            try {
+                const jsonData = JSON.parse(textarea.value);
+                console.log('=== VALIDAÇÃO DO JSON ===');
+                console.log('JSON:', jsonData);
+                
+                let issues = [];
+                let warnings = [];
+                
+                if (!window.selectedDataServer) {
+                    issues.push('Nenhum DataServer selecionado');
+                } else {
+                    console.log('DataServer Info:', window.selectedDataServer.info);
+                    
+                    if (window.selectedDataServer.info?.primaryKeys) {
+                        const primaryKeys = window.selectedDataServer.info.primaryKeys;
+                        console.log('Chaves primárias esperadas:', primaryKeys);
+                        
+                        // Verifica chaves primárias
+                        const missingKeys = primaryKeys.filter(key => !jsonData.hasOwnProperty(key));
+                        const emptyKeys = primaryKeys.filter(key => jsonData.hasOwnProperty(key) && (jsonData[key] === null || jsonData[key] === ''));
+                        
+                        if (missingKeys.length > 0) {
+                            warnings.push(`Chaves primárias ausentes: ${missingKeys.join(', ')}`);
+                        }
+                        
+                        if (emptyKeys.length > 0) {
+                            warnings.push(`Chaves primárias vazias: ${emptyKeys.join(', ')}`);
+                        }
+                        
+                        if (missingKeys.length === primaryKeys.length) {
+                            issues.push('NENHUMA chave primária foi preenchida');
+                        }
+                    }
+                    
+                    // Verifica se há exemplo para comparar
+                    if (window.currentPostExample) {
+                        try {
+                            const exampleData = typeof window.currentPostExample === 'string' ? 
+                                JSON.parse(window.currentPostExample) : window.currentPostExample;
+                            
+                            const exampleKeys = Object.keys(exampleData);
+                            const jsonKeys = Object.keys(jsonData);
+                            
+                            const extraKeys = jsonKeys.filter(key => !exampleKeys.includes(key));
+                            const missingFromExample = exampleKeys.filter(key => !jsonKeys.includes(key));
+                            
+                            if (extraKeys.length > 0) {
+                                warnings.push(`Campos extras (não no exemplo): ${extraKeys.join(', ')}`);
+                            }
+                            
+                            if (missingFromExample.length > 0) {
+                                warnings.push(`Campos do exemplo não incluídos: ${missingFromExample.join(', ')}`);
+                            }
+                        } catch (e) {
+                            warnings.push('Erro ao comparar com exemplo: ' + e.message);
+                        }
+                    }
+                }
+                
+                // Monta o relatório
+                let message = `✅ JSON é válido com ${Object.keys(jsonData).length} campo(s)`;
+                
+                if (issues.length > 0) {
+                    message += `\n\n❌ PROBLEMAS:\n${issues.map(i => '• ' + i).join('\n')}`;
+                }
+                
+                if (warnings.length > 0) {
+                    message += `\n\n⚠️ AVISOS:\n${warnings.map(w => '• ' + w).join('\n')}`;
+                }
+                
+                const alertType = issues.length > 0 ? 'danger' : (warnings.length > 0 ? 'warning' : 'success');
+                showAlert(message, alertType);
+                
+                console.log('Problemas encontrados:', issues);
+                console.log('Avisos encontrados:', warnings);
+                
+            } catch (error) {
+                showAlert('❌ JSON inválido: ' + error.message, 'danger');
+                console.error('Erro na validação:', error);
+            }
+        }
+
+        function copyJsonToClipboard() {
+            const textarea = document.getElementById('prepared-json');
+            if (!textarea || !textarea.value) {
+                showAlert('Nenhum JSON para copiar!', 'warning');
+                return;
+            }
+
+            try {
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    showAlert('JSON copiado para a área de transferência!', 'success');
+                }).catch(() => {
+                    // Fallback para navegadores mais antigos
+                    textarea.select();
+                    document.execCommand('copy');
+                    showAlert('JSON copiado para a área de transferência!', 'success');
+                });
+            } catch (error) {
+                showAlert('Erro ao copiar JSON: ' + error.message, 'danger');
+            }
+        }
+
+        function testJsonInPostman() {
+            const textarea = document.getElementById('prepared-json');
+            if (!textarea || !textarea.value) {
+                showAlert('Nenhum JSON para testar!', 'warning');
+                return;
+            }
+
+            if (!window.selectedDataServer) {
+                showAlert('Nenhum DataServer selecionado!', 'warning');
+                return;
+            }
+
+            // Cria instruções detalhadas para testar no Postman
+            const instructions = `
+📋 INSTRUÇÕES PARA TESTE NO POSTMAN:
+
+🔗 URL:
+http://localhost:8051/rmsrestdataserver/rest/${window.selectedDataServer.name}
+
+🔧 Método: POST
+
+📋 Headers:
+• Content-Type: application/json
+• Authorization: Basic [suas_credenciais_base64]
+• CODCOLIGADA: 1
+
+📄 Body (raw JSON):
+${textarea.value}
+
+💡 DICAS:
+1. Para gerar o Basic Auth, use: btoa("usuario:senha")
+2. Certifique-se que o RM está rodando na porta 8051
+3. Use exatamente o mesmo JSON que está na textarea
+4. Compare o resultado com o que o sistema retorna
+
+📋 O JSON foi copiado para a área de transferência!
+            `;
+
+            // Copia o JSON e mostra as instruções
+            navigator.clipboard.writeText(textarea.value).then(() => {
+                alert(instructions);
+            }).catch(() => {
+                // Fallback
+                textarea.select();
+                document.execCommand('copy');
+                alert(instructions);
+            });
+        }
+
+        function backToMain() {
+            location.reload();
+        }
+
+        function saveResult() {
+            showAlert('Resultado salvo (simulado)', 'success');
+        }
+
+        function saveJsonLocally() {
+            const jsonText = document.getElementById('prepared-json').value;
+            
+            if (!jsonText || jsonText.trim() === '') {
+                showAlert('Nenhum JSON para salvar', 'warning');
+                return;
+            }
+            
+            try {
+                // Valida se é um JSON válido
+                const parsedJson = JSON.parse(jsonText);
+                
+                // Salva no sessionStorage para persistir durante a sessão
+                const timestamp = new Date().toISOString();
+                const saveKey = `savedJson_${window.selectedDataServer?.name || 'unknown'}_${timestamp}`;
+                
+                const savedData = {
+                    dataServer: window.selectedDataServer?.name || 'unknown',
+                    timestamp: timestamp,
+                    json: parsedJson,
+                    jsonText: jsonText
+                };
+                
+                sessionStorage.setItem(saveKey, JSON.stringify(savedData));
+                
+                // Também salva uma referência na lista de JSONs salvos
+                const savedJsonsList = JSON.parse(sessionStorage.getItem('savedJsonsList') || '[]');
+                savedJsonsList.push({
+                    key: saveKey,
+                    dataServer: window.selectedDataServer?.name || 'unknown',
+                    timestamp: timestamp,
+                    preview: jsonText.substring(0, 100) + (jsonText.length > 100 ? '...' : '')
+                });
+                
+                // Mantém apenas os últimos 10 JSONs salvos
+                if (savedJsonsList.length > 10) {
+                    const oldestKey = savedJsonsList.shift().key;
+                    sessionStorage.removeItem(oldestKey);
+                }
+                
+                sessionStorage.setItem('savedJsonsList', JSON.stringify(savedJsonsList));
+                
+                showAlert(`JSON salvo com sucesso! (${timestamp})`, 'success');
+                console.log('JSON salvo:', savedData);
+                
+            } catch (error) {
+                showAlert('Erro ao salvar JSON: ' + error.message, 'danger');
+                console.error('Erro ao salvar JSON:', error);
+            }
+        }
+
+        // Função utilitária para formatar JSON
+        function formatJSON(jsonString) {
+            try {
+                if (typeof jsonString === 'object') {
+                    return JSON.stringify(jsonString, null, 2);
+                }
+                const parsed = JSON.parse(jsonString);
+                return JSON.stringify(parsed, null, 2);
+            } catch (error) {
+                console.error('Erro ao formatar JSON:', error);
+                return jsonString;
+            }
+        }
+
+        // Inicialização
+        $(document).ready(function() {
+            // Configura event listeners dos botões
+            document.getElementById('redetectRMBtn').addEventListener('click', redetectRM);
+            document.getElementById('showRMStatusBtn').addEventListener('click', showRMStatus);
+            document.getElementById('selectDataServerBtn').addEventListener('click', selectDataServer);
+            document.getElementById('showGetOptionsBtn').addEventListener('click', showGetOptions);
+            document.getElementById('showPostOptionsBtn').addEventListener('click', showPostOptions);
+            
+            // Executa a inicialização das funções
+            setTimeout(async () => {
+                await loadEnvironmentInfo();
+                await redetectRM();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

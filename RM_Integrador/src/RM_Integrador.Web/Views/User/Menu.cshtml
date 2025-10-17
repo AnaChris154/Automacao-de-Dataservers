@@ -1,0 +1,1789 @@
+@{
+    ViewData["Title"] = "Menu do Usuário";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Menu do Usuário - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding-top: 64px; /* Espaço para o menu de perfil fixo */
+            margin: 0; /* Remove margem padrão */
+        }
+
+        /* Quando não está no modo abas, centraliza o menu */
+        body:not(.tabs-active) {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Quando está no modo abas, remove o flex e zera padding */
+        body.tabs-active {
+            display: block;
+            padding-top: 0; /* Remove todo padding para que as abas fiquem no topo */
+        }
+
+        /* Estilo do menu de perfil */
+        .profile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001; /* Z-index maior que as abas */
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 64px; /* Altura fixa */
+        }
+
+        .menu-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto; /* Remove margem superior/inferior para centralização perfeita */
+            padding: 0 15px;
+        }
+
+        .menu-card {
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+            height: 100%;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card {
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: 100%;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #2196F3;
+        }
+
+        .btn-menu {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            margin-top: auto;
+        }
+
+        .btn-menu:hover {
+            background-color: #1976D2;
+            color: white;
+        }
+
+        .main-title {
+            color: #2196F3;
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            padding-top: 0; /* Remove padding superior */
+        }
+    </style>
+</head>
+<body>
+    <!-- Tab Bar (inicialmente oculta) -->
+    <div id="tabBar" class="tab-bar mb-3" style="display: none;"></div>
+    
+    <!-- Tab Content Area (inicialmente oculta) -->
+    <div id="tabContent" style="display: none;"></div>
+    
+    <!-- Menu Principal (visível por padrão) -->
+    <div id="mainMenu">
+        <!-- Menu de Perfil -->
+    <nav class="navbar navbar-expand navbar-light bg-white shadow-sm mb-4 profile-menu">
+        <div class="container-fluid justify-content-between">
+            <span class="navbar-brand">
+                <i class="bi bi-app text-primary me-2"></i>
+                Área do Usuário
+            </span>
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" 
+                   id="perfilDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="me-2 fw-bold text-primary">@User.Identity?.Name</span>
+                    <span class="rounded-circle bg-primary text-white d-flex justify-content-center align-items-center" 
+                          style="width: 36px; height: 36px;">
+                        <i class="bi bi-person-fill" style="font-size: 1.2rem;"></i>
+                    </span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="perfilDropdown">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="alertEmDesenvolvimento()">
+                            <i class="bi bi-person-circle me-2"></i>Meu Perfil
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form method="post" action="@Url.Action("Logout", "Account")" style="margin: 0;">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="bi bi-box-arrow-right me-2"></i>Sair
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Resto do seu conteúdo existente -->
+    <div class="container menu-container">
+        <h2 class="main-title">🔵 Sistema de Automação DataServer BH</h2>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-3">
+                <div class="card menu-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">📄</div>
+                        <h5 class="card-title h6 mb-2">Buscar Jsons</h5>
+                        <p class="card-text small text-muted mb-3">
+                            Encontre exemplos de JSONs para usar
+                        </p>
+                        <button onclick="showBuscarJsons()" class="btn btn-menu w-100">
+                            Acessar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card menu-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">🔍</div>
+                        <h5 class="card-title h6 mb-2">Testar GET/POST</h5>
+                        <p class="card-text small text-muted mb-3">
+                            Teste requisições no DataServer
+                        </p>
+                        <button onclick="showTesteRequests()" class="btn btn-menu w-100">
+                            Acessar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card menu-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">⚖️</div>
+                        <h5 class="card-title h6 mb-2">Comparar JSON</h5>
+                        <p class="card-text small text-muted mb-3">
+                            Compare estruturas JSON
+                        </p>
+                        <a href="#" onclick="showCompareJson()" class="btn btn-menu w-100">
+                            Acessar
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card menu-card">
+                    <div class="card-body text-center">
+                        <div class="card-icon">🔎</div>
+                        <h5 class="card-title h6 mb-2">Buscar DataServer</h5>
+                        <p class="card-text small text-muted mb-3">
+                            Encontre DataServers disponíveis
+                        </p>
+                        <a href="#" onclick="showBuscarDataServer()" class="btn btn-menu w-100">Acessar</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Segunda linha de cards removida -->
+        
+        <!-- Botão para fechar todas as abas (só aparece quando há abas abertas) -->
+        <div class="text-center mt-4" id="closeAllTabsSection" style="display: none;">
+            <button class="btn btn-outline-danger" onclick="tabManager.backToMenu()">
+                <i class="bi bi-x-circle"></i> Fechar Todas as Abas
+            </button>
+        </div>
+    </div>
+    </div> <!-- Fim do mainMenu -->
+
+    <!-- Modal para operações -->
+    <div class="modal fade" id="operationModal">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Tab System Styles e Scripts -->
+    <style>
+        .tab-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 0.5rem 0.5rem 0; /* Remove padding inferior */
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            position: fixed;
+            top: 64px; /* Posição padrão (quando menu de perfil está visível) */
+            left: 0;
+            right: 0;
+            z-index: 1000; /* Z-index menor que o menu de perfil */
+            height: 48px; /* Altura fixa para as abas */
+            margin: 0; /* Remove margens */
+            box-sizing: border-box;
+        }
+        .tab {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            margin-right: 0.25rem;
+            margin-bottom: 0; /* Remove margem inferior */
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 40px; /* Altura fixa da aba */
+            box-sizing: border-box;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+        .tab-close {
+            margin-left: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            cursor: pointer;
+            padding: 0.2rem;
+            border-radius: 2px;
+        }
+        .tab-close:hover {
+            opacity: 1;
+            background: rgba(255,255,255,0.2);
+        }
+        .tab-content {
+            /* Remove padding desnecessário */
+            margin-top: 48px; /* Espaço exato para a altura da tab-bar */
+            position: relative;
+            z-index: 1; /* Garante que está abaixo das abas */
+        }
+        
+        /* Garante que quando as abas estão ativas, não há conflitos de posicionamento */
+        body.tabs-active .container,
+        body.tabs-active .menu-container {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        
+        /* Ajustar o layout quando abas estão ativas */
+        body.tabs-active #mainMenu {
+            display: none; /* Por padrão esconde o menu quando abas estão ativas */
+        }
+        body.tabs-active .profile-menu {
+            display: none !important; /* Esconde o menu de perfil quando abas estão ativas */
+        }
+        body.tabs-active #tabBar {
+            display: flex !important;
+            top: 0 !important; /* Move as abas para o topo da tela */
+        }
+        body.tabs-active #tabContent {
+            display: block !important;
+            margin-top: 48px !important; /* Apenas o espaço da tab-bar */
+            padding: 15px; /* Padding interno do conteúdo */
+            min-height: calc(100vh - 48px); /* Altura mínima ajustada */
+        }
+        
+        /* Estado especial: quando o menu está sendo mostrado no modo abas */
+        body.tabs-active #mainMenu[style*="display: block"] {
+            display: block !important;
+            margin-top: 0 !important; /* Remove margin-top para ocupar toda a tela */
+            padding-top: 48px !important; /* Apenas espaço para as abas */
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+            position: relative;
+            z-index: 1;
+            background-color: #f8f9fa; /* Garante que cubra qualquer conteúdo por baixo */
+            min-height: calc(100vh - 48px);
+        }
+        
+        /* Quando o menu está ativo no modo abas, mostra o menu de perfil novamente */
+        body.tabs-active #mainMenu[style*="display: block"] ~ nav.profile-menu,
+        body.tabs-active #mainMenu[style*="display: block"] .profile-menu {
+            display: flex !important;
+            position: fixed;
+            top: 48px; /* Abaixo das abas */
+            z-index: 1001;
+        }
+        
+        /* Garante que o tabContent seja completamente oculto quando o menu está ativo */
+        body.tabs-active #tabContent[style*="display: none"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+    </style>
+    
+    <script>
+        // Tab Manager Class (mesmo da outra tela)
+        class TabManager {
+            constructor() {
+                this.tabs = new Map();
+                this.activeTabId = null;
+                this.tabStates = new Map(); // Para armazenar estados das abas
+            }
+            
+            // Salva o estado atual da aba ativa
+            saveCurrentTabState() {
+                if (!this.activeTabId) return;
+                
+                const tab = this.tabs.get(this.activeTabId);
+                if (!tab) return;
+                
+                // Captura formulários, inputs, selects, textareas da aba atual
+                const tabContent = document.getElementById('tabContent');
+                const formData = new FormData();
+                const state = {
+                    formData: {},
+                    scrollPosition: tabContent.scrollTop || 0,
+                    timestamp: Date.now()
+                };
+                
+                // Salva valores de todos os inputs, selects, textareas
+                const inputs = tabContent.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (input.id || input.name) {
+                        const key = input.id || input.name;
+                        if (input.type === 'checkbox' || input.type === 'radio') {
+                            state.formData[key] = input.checked;
+                        } else {
+                            state.formData[key] = input.value;
+                        }
+                    }
+                });
+                
+                // Salva estado de elementos visíveis/ocultos
+                const sections = tabContent.querySelectorAll('[id]');
+                sections.forEach(section => {
+                    if (section.id) {
+                        state.formData[`${section.id}_display`] = window.getComputedStyle(section).display;
+                    }
+                });
+                
+                // Salva variáveis globais específicas da aba (como selectedDataServer)
+                if (window.selectedDataServer) {
+                    state.formData['selectedDataServer'] = JSON.stringify(window.selectedDataServer);
+                }
+                
+                // Armazena no sessionStorage
+                sessionStorage.setItem(`tab_state_${this.activeTabId}`, JSON.stringify(state));
+                this.tabStates.set(this.activeTabId, state);
+                
+                console.log('Estado salvo para aba:', this.activeTabId, state);
+            }
+            
+            // Restaura o estado da aba
+            restoreTabState(tabId) {
+                // Primeiro tenta restaurar do sessionStorage
+                const savedState = sessionStorage.getItem(`tab_state_${tabId}`);
+                let state = null;
+                
+                if (savedState) {
+                    try {
+                        state = JSON.parse(savedState);
+                        this.tabStates.set(tabId, state);
+                    } catch (e) {
+                        console.warn('Erro ao restaurar estado da aba:', e);
+                    }
+                } else {
+                    state = this.tabStates.get(tabId);
+                }
+                
+                if (!state) return;
+                
+                console.log('Restaurando estado da aba:', tabId, state);
+                
+                // Aguarda um pequeno delay para garantir que o conteúdo foi carregado
+                setTimeout(() => {
+                    const tabContent = document.getElementById('tabContent');
+                    
+                    // Restaura valores dos campos
+                    Object.keys(state.formData).forEach(key => {
+                        if (key.endsWith('_display')) {
+                            const elementId = key.replace('_display', '');
+                            const element = document.getElementById(elementId);
+                            if (element) {
+                                element.style.display = state.formData[key];
+                            }
+                        } else if (key === 'selectedDataServer') {
+                            try {
+                                window.selectedDataServer = JSON.parse(state.formData[key]);
+                                console.log('selectedDataServer restaurado:', window.selectedDataServer);
+                            } catch (e) {
+                                console.warn('Erro ao restaurar selectedDataServer:', e);
+                            }
+                        } else {
+                            const element = document.getElementById(key) || document.querySelector(`[name="${key}"]`);
+                            if (element) {
+                                if (element.type === 'checkbox' || element.type === 'radio') {
+                                    element.checked = state.formData[key];
+                                } else {
+                                    element.value = state.formData[key];
+                                }
+                                
+                                // Dispara evento change para atualizar a interface
+                                element.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        }
+                    });
+                    
+                    // Restaura posição do scroll
+                    if (state.scrollPosition) {
+                        tabContent.scrollTop = state.scrollPosition;
+                    }
+                    
+                    // Dispara evento personalizado para que as abas possam fazer restauração específica
+                    window.dispatchEvent(new CustomEvent('tabStateRestored', { 
+                        detail: { tabId, state } 
+                    }));
+                }, 100);
+            }
+            
+            createTab(title, content, id = null) {
+                const tabId = id || 'tab-' + Date.now();
+                
+                // Salva o estado da aba atual antes de trocar
+                this.saveCurrentTabState();
+                
+                // Ativa o modo de abas na primeira criação
+                if (this.tabs.size === 0) {
+                    this.activateTabMode();
+                }
+                
+                // Se a aba já existe, apenas ativa ela
+                if (this.tabs.has(tabId)) {
+                    this.activateTab(tabId);
+                    return tabId;
+                }
+                
+                const tab = {
+                    id: tabId,
+                    title: title,
+                    content: content
+                };
+                
+                this.tabs.set(tabId, tab);
+                this.renderTab(tab);
+                this.activateTab(tabId);
+                return tabId;
+            }
+            
+            activateTabMode() {
+                document.body.classList.add('tabs-active');
+                
+                // Esconde o menu principal ao ativar modo de abas
+                const mainMenu = document.getElementById('mainMenu');
+                const tabContent = document.getElementById('tabContent');
+                const profileMenu = document.querySelector('.profile-menu');
+                
+                if (mainMenu) {
+                    mainMenu.style.display = 'none';
+                }
+                if (tabContent) {
+                    tabContent.style.display = 'block';
+                }
+                // Esconde o menu de perfil nas abas
+                if (profileMenu) {
+                    profileMenu.style.display = 'none';
+                }
+                
+                // Adiciona botão para voltar ao menu
+                const backButton = document.createElement('div');
+                backButton.className = 'tab back-to-menu';
+                backButton.innerHTML = '<i class="bi bi-house-fill"></i> Menu';
+                backButton.onclick = () => this.showMainMenu();
+                
+                const tabBar = document.getElementById('tabBar');
+                tabBar.appendChild(backButton);
+            }
+            
+            renderTab(tab) {
+                const tabBar = document.getElementById('tabBar');
+                const tabElement = document.createElement('div');
+                tabElement.className = 'tab';
+                tabElement.setAttribute('data-tab-id', tab.id);
+                tabElement.innerHTML = `
+                    <span class="tab-title">${tab.title}</span>
+                    <span class="tab-close" onclick="event.stopPropagation(); tabManager.closeTab('${tab.id}')">&times;</span>
+                `;
+                
+                tabBar.appendChild(tabElement);
+                
+                // Adiciona evento de clique para ativar aba
+                tabElement.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('tab-close')) {
+                        this.activateTab(tab.id);
+                    }
+                });
+            }
+            
+            activateTab(tabId) {
+                if (this.activeTabId === tabId) return;
+                
+                // Salva o estado da aba atual antes de trocar
+                this.saveCurrentTabState();
+                
+                // Garante que está no modo abas
+                if (!document.body.classList.contains('tabs-active')) {
+                    document.body.classList.add('tabs-active');
+                }
+                
+                // Esconde o menu principal quando uma aba é ativada
+                const mainMenu = document.getElementById('mainMenu');
+                const tabContent = document.getElementById('tabContent');
+                const profileMenu = document.querySelector('.profile-menu');
+                const tabBar = document.getElementById('tabBar');
+                
+                mainMenu.style.display = 'none';
+                tabContent.style.display = 'block';
+                
+                // Esconde o menu de perfil nas abas
+                if (profileMenu) {
+                    profileMenu.style.display = 'none';
+                }
+                
+                // Move as abas para o topo quando o menu de perfil está oculto
+                if (tabBar) {
+                    tabBar.style.top = '0px';
+                }
+                
+                // Remove qualquer estilo inline que possa interferir
+                mainMenu.style.marginTop = '';
+                mainMenu.style.paddingTop = '';
+                
+                // Esconde o botão de fechar todas as abas
+                const closeAllSection = document.getElementById('closeAllTabsSection');
+                if (closeAllSection) {
+                    closeAllSection.style.display = 'none';
+                }
+                
+                // Remove ativo da aba anterior
+                if (this.activeTabId) {
+                    const oldTab = document.querySelector(`[data-tab-id="${this.activeTabId}"]`);
+                    if (oldTab) oldTab.classList.remove('active');
+                }
+                
+                // Ativa nova aba
+                const newTab = document.querySelector(`[data-tab-id="${tabId}"]`);
+                if (newTab) {
+                    newTab.classList.add('active');
+                    this.activeTabId = tabId;
+                }
+                
+                // Atualiza o conteúdo
+                const tab = this.tabs.get(tabId);
+                if (tab) {
+                    tabContent.innerHTML = tab.content;
+                    
+                    // Reexecuta os scripts se existirem
+                    if (tab.scripts && tab.scripts.length > 0) {
+                        setTimeout(() => {
+                            tab.scripts.forEach(scriptText => {
+                                try {
+                                    window.eval(scriptText);
+                                } catch (e) {
+                                    console.error('Erro ao executar script na ativação da aba:', e);
+                                }
+                            });
+                        }, 10);
+                    }
+                    
+                    this.reinitializeTabEvents(tabId);
+                    
+                    // Restaura o estado da aba após um pequeno delay
+                    setTimeout(() => {
+                        this.restoreTabState(tabId);
+                    }, 200);
+                }
+            }
+            
+            closeTab(tabId) {
+                const tabElement = document.querySelector(`[data-tab-id="${tabId}"]`);
+                if (tabElement) {
+                    tabElement.remove();
+                    this.tabs.delete(tabId);
+                    
+                    // Remove o estado da aba do sessionStorage
+                    sessionStorage.removeItem(`tab_state_${tabId}`);
+                    this.tabStates.delete(tabId);
+                    
+                    // Se estava ativa, ativa outra aba ou volta ao menu
+                    if (this.activeTabId === tabId) {
+                        const remainingTabs = Array.from(this.tabs.keys());
+                        console.log(`Abas restantes após fechar ${tabId}:`, remainingTabs);
+                        
+                        if (remainingTabs.length > 0) {
+                            // Ativa a última aba restante
+                            this.activateTab(remainingTabs[remainingTabs.length - 1]);
+                        } else {
+                            // Não há mais abas, volta ao menu
+                            console.log('Nenhuma aba restante, voltando ao menu');
+                            this.backToMenu();
+                        }
+                    }
+                }
+            }
+            
+            backToMenu() {
+                // Salva o estado da aba atual antes de fechar tudo
+                this.saveCurrentTabState();
+                
+                // Limpa todos os estados das abas do sessionStorage
+                this.tabs.forEach((tab, tabId) => {
+                    sessionStorage.removeItem(`tab_state_${tabId}`);
+                });
+                this.tabStates.clear();
+                
+                // Fecha todas as abas
+                this.tabs.clear();
+                document.getElementById('tabBar').innerHTML = '';
+                document.getElementById('tabContent').innerHTML = '';
+                
+                // Esconde o botão de fechar todas as abas
+                const closeAllSection = document.getElementById('closeAllTabsSection');
+                if (closeAllSection) {
+                    closeAllSection.style.display = 'none';
+                }
+                
+                // Volta ao modo menu
+                document.body.classList.remove('tabs-active');
+                this.activeTabId = null;
+                
+                // Mostra o menu principal novamente
+                const mainMenu = document.getElementById('mainMenu');
+                const profileMenu = document.querySelector('.profile-menu');
+                
+                if (mainMenu) {
+                    mainMenu.style.display = 'block';
+                }
+                
+                // Reexibe o menu de perfil quando voltamos ao menu
+                if (profileMenu) {
+                    profileMenu.style.display = 'flex';
+                }
+                
+                console.log('Voltou ao menu principal');
+            }
+            
+            showMainMenu() {
+                // Mostra o menu principal sem fechar as abas
+                const mainMenu = document.getElementById('mainMenu');
+                const tabContent = document.getElementById('tabContent');
+                const profileMenu = document.querySelector('.profile-menu');
+                const tabBar = document.getElementById('tabBar');
+                
+                // Alterna para o modo de visualização do menu
+                mainMenu.style.display = 'block';
+                tabContent.style.display = 'none';
+                
+                // Reexibe o menu de perfil quando voltamos ao menu
+                if (profileMenu) {
+                    profileMenu.style.display = 'flex';
+                }
+                
+                // Ajusta a posição das abas para acomodar o menu de perfil
+                if (tabBar) {
+                    tabBar.style.top = '64px';
+                }
+                
+                // Remove qualquer margin-top adicional que possa ter sido aplicado
+                mainMenu.style.marginTop = '';
+                mainMenu.style.padding = '';
+                
+                // Mostra o botão de fechar todas as abas se houver abas
+                const closeAllSection = document.getElementById('closeAllTabsSection');
+                if (closeAllSection && this.tabs.size > 0) {
+                    closeAllSection.style.display = 'block';
+                }
+                
+                // Remove a classe active de todas as abas
+                document.querySelectorAll('.tab:not(.back-to-menu)').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                this.activeTabId = null;
+            }
+            
+            reinitializeTabEvents(tabId) {
+                // Aqui você pode adicionar lógica específica para cada tipo de aba
+                console.log(`Reinicializando eventos para aba: ${tabId}`);
+                
+                // Se for a aba de teste de requisições, inicializa as funções específicas
+                if (tabId.includes('teste') || tabId.includes('request') || tabId === 'Teste de Requisições' || tabId === 'TestRequests') {
+                    console.log('Inicializando funções do TestRequests para aba:', tabId);
+                    
+                    // Aguarda um momento para garantir que o DOM está pronto
+                    setTimeout(() => {
+                        // Chama a inicialização específica da tela
+                        if (typeof initializeTestRequests === 'function') {
+                            initializeTestRequests();
+                        }
+                        
+                        // Configura listeners dos elementos de formulário
+                        if (typeof setupRequestMethodListener === 'function') {
+                            setupRequestMethodListener();
+                        }
+                        
+                        console.log('Funções TestRequests inicializadas na aba.');
+                    }, 100);
+                }
+            }
+            
+            initializeTestRequestsFunctions() {
+                console.log('Inicializando funções do TestRequests...');
+                
+                // Função para selecionar DataServer
+                window.selectDataServer = async function() {
+                    const term = document.getElementById('dataServerInput').value;
+                    if (!term || term.trim() === '') {
+                        alert('Digite o nome do DataServer');
+                        return;
+                    }
+                    
+                    console.log('Buscando DataServer:', term);
+                    
+                    try {
+                        // Chama o endpoint real para buscar o DataServer
+                        const response = await fetch(`/TestRequests/SearchDataServer?term=${encodeURIComponent(term.trim())}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Resposta do servidor:', data);
+                        
+                        if (data.success && data.data) {
+                            // Mostra informações do DataServer
+                            document.getElementById('serverName').textContent = data.data.name;
+                            document.getElementById('serverRoutine').textContent = data.data.routine;
+                            document.getElementById('primaryKeys').textContent = data.data.primaryKeys ? data.data.primaryKeys.join(', ') : 'Nenhuma';
+                            
+                            // Mostra a div de informações e o seletor de operações
+                            document.getElementById('dataServerInfo').style.display = 'block';
+                            document.getElementById('operationsSelector').style.display = 'block';
+                            
+                            // Armazena os dados para uso posterior
+                            window.selectedDataServer = data.data;
+                            
+                            alert('DataServer encontrado com sucesso!');
+                        } else {
+                            alert(data.message || 'DataServer não encontrado');
+                        }
+                    } catch (error) {
+                        console.error('Erro ao buscar DataServer:', error);
+                        alert('Erro ao buscar DataServer: ' + error.message);
+                    }
+                };
+                
+                // Função para mostrar opções GET
+                window.showGetOptions = function() {
+                    console.log('Mostrando opções GET');
+                    if (!window.selectedDataServer) {
+                        alert('Primeiro selecione um DataServer');
+                        return;
+                    }
+                    
+                    document.getElementById('operationsSection').style.display = 'block';
+                    document.getElementById('getOptions').style.display = 'block';
+                    document.getElementById('postOptions').style.display = 'none';
+                    document.getElementById('jsonPreparationArea').style.display = 'none';
+                };
+                
+                // Função para mostrar opções POST
+                window.showPostOptions = function() {
+                    console.log('Mostrando opções POST');
+                    if (!window.selectedDataServer) {
+                        alert('Primeiro selecione um DataServer');
+                        return;
+                    }
+                    
+                    document.getElementById('operationsSection').style.display = 'block';
+                    document.getElementById('getOptions').style.display = 'none';
+                    document.getElementById('postOptions').style.display = 'block';
+                    document.getElementById('jsonPreparationArea').style.display = 'none';
+                    
+                    // Se tem chaves primárias, gera o formulário
+                    if (window.selectedDataServer.primaryKeys && window.selectedDataServer.primaryKeys.length > 0) {
+                        const form = document.getElementById('primaryKeysForm');
+                        if (form) {
+                            form.innerHTML = '';
+                            window.selectedDataServer.primaryKeys.forEach(key => {
+                                form.innerHTML += `
+                                    <div class="mb-3">
+                                        <label for="key-${key}" class="form-label">${key}:</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control primary-key-input" 
+                                                   id="key-${key}" data-key="${key}" 
+                                                   placeholder="Digite o ${key}">
+                                            <button class="btn btn-outline-info" type="button" 
+                                                    onclick="checkIfExists('${key}', 'key-${key}')" 
+                                                    title="Verificar se ID já existe">
+                                                <i class="fas fa-search"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                    }
+                };
+                
+                // Função para executar GET
+                window.executeGet = async function() {
+                    console.log('Executando GET');
+                    if (!window.selectedDataServer) {
+                        alert('Primeiro selecione um DataServer');
+                        return;
+                    }
+                    
+                    showLoading(true);
+                    
+                    try {
+                        const filter = document.getElementById('filterInput') ? document.getElementById('filterInput').value : '';
+                        
+                        // Usando o endpoint correto baseado na sua estrutura
+                        let url = `/User/TesteGET?dataServerName=${encodeURIComponent(window.selectedDataServer.name)}`;
+                        if (filter) {
+                            url += `&filter=${encodeURIComponent(filter)}`;
+                        }
+                        
+                        console.log('Executando GET para:', url);
+                        
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        
+                        showLoading(false);
+                        
+                        if (result.success) {
+                            const resultContent = document.getElementById('resultContent');
+                            const resultArea = document.getElementById('resultArea');
+                            const operationsSection = document.getElementById('operationsSection');
+                            const operationsSelector = document.getElementById('operationsSelector');
+                            
+                            if (resultContent) {
+                                resultContent.textContent = JSON.stringify(result.data, null, 2);
+                            }
+                            if (resultArea) resultArea.style.display = 'block';
+                            if (operationsSection) operationsSection.style.display = 'none';
+                            if (operationsSelector) operationsSelector.style.display = 'none';
+                            
+                            showAlert('GET executado com sucesso!', 'success');
+                        } else {
+                            showAlert('Erro no GET: ' + (result.message || 'Erro desconhecido'), 'danger');
+                        }
+                    } catch (error) {
+                        showLoading(false);
+                        console.error('Erro ao executar GET:', error);
+                        showAlert('Erro ao executar GET: ' + error.message, 'danger');
+                    }
+                };
+                
+                // Função para preparar POST
+                window.preparePost = async function() {
+                    console.log('Preparando POST');
+                    alert('Funcionalidade em desenvolvimento');
+                };
+                
+                // Função para enviar JSON preparado
+                window.sendPreparedJson = async function() {
+                    console.log('Enviando JSON preparado');
+                    alert('Funcionalidade em desenvolvimento');
+                };
+                
+                // Função para formatar JSON
+                window.formatJsonInTextarea = function() {
+                    console.log('Formatando JSON');
+                    alert('Funcionalidade em desenvolvimento');
+                };
+                
+                // Função para voltar às chaves
+                window.goBackToKeys = function() {
+                    console.log('Voltando às chaves');
+                    document.getElementById('jsonPreparationArea').style.display = 'none';
+                    document.getElementById('postOptions').style.display = 'block';
+                };
+                
+                // Função para voltar ao menu principal
+                window.backToMain = function() {
+                    console.log('Voltando ao menu principal');
+                    const resultArea = document.getElementById('resultArea');
+                    const operationsSelector = document.getElementById('operationsSelector');
+                    
+                    if (resultArea) resultArea.style.display = 'none';
+                    if (operationsSelector) operationsSelector.style.display = 'block';
+                };
+                
+                // Função para salvar resultado
+                window.saveResult = function() {
+                    console.log('Salvando resultado');
+                    const resultContent = document.getElementById('resultContent');
+                    if (resultContent && resultContent.textContent) {
+                        // Cria um blob com o conteúdo JSON
+                        const blob = new Blob([resultContent.textContent], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        
+                        // Cria um link temporário para download
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `resultado_${new Date().getTime()}.json`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        showAlert('Resultado salvo com sucesso!', 'success');
+                    } else {
+                        showAlert('Nenhum resultado para salvar', 'warning');
+                    }
+                };
+                
+                // Função para verificar se um ID já existe
+                window.checkIfExists = async function(keyName, fieldId) {
+                    const field = document.getElementById(fieldId);
+                    const idValue = field ? field.value : '';
+                    
+                    if (!idValue) {
+                        alert('Digite um ID para verificar');
+                        return;
+                    }
+                    
+                    if (!window.selectedDataServer) {
+                        alert('Primeiro selecione um DataServer');
+                        return;
+                    }
+                    
+                    try {
+                        const filter = `${keyName}='${idValue}'`;
+                        const url = `/User/TesteGET?dataServerName=${encodeURIComponent(window.selectedDataServer.name)}&filter=${encodeURIComponent(filter)}`;
+                        
+                        const response = await fetch(url);
+                        const result = await response.json();
+                        
+                        if (result.success && result.data && result.data.length > 0) {
+                            field.style.borderColor = '#dc3545';
+                            alert(`ID ${idValue} já existe! Gere um novo ID.`);
+                        } else {
+                            field.style.borderColor = '#28a745';
+                            alert(`ID ${idValue} está disponível!`);
+                        }
+                    } catch (error) {
+                        console.error('Erro ao verificar ID:', error);
+                        field.style.borderColor = '#17a2b8';
+                        alert('Erro ao verificar ID. Assumindo que está disponível.');
+                    }
+                };
+                
+                // Função para re-detectar RM
+                window.redetectRM = async function() {
+                    console.log('Re-detectando RM...');
+                    const statusElement = document.getElementById('rm-connection-status');
+                    if (statusElement) {
+                        statusElement.className = 'alert alert-warning';
+                        statusElement.innerHTML = '<i class="fas fa-sync fa-spin"></i> Re-detectando RM local...';
+                        
+                        // Simula detecção (aqui você pode integrar com sua API real)
+                        setTimeout(async () => {
+                            try {
+                                // Aqui você pode fazer uma chamada real para sua API
+                                // const response = await fetch('/api/detect-rm');
+                                // const result = await response.json();
+                                
+                                statusElement.className = 'alert alert-info';
+                                statusElement.innerHTML = '<i class="fas fa-info-circle"></i> RM local detectado (simulado)';
+                            } catch (error) {
+                                statusElement.className = 'alert alert-danger';
+                                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Erro ao detectar RM';
+                            }
+                        }, 2000);
+                    }
+                };
+                
+                // Função para mostrar status RM
+                window.showRMStatus = function() {
+                    console.log('Mostrando status RM');
+                    const message = `Status do RM Local:
+- Disponível: Não detectado
+- URL: Não configurado
+- Versão: Desconhecida
+- Última detecção: Nunca
+- Status: Em desenvolvimento`;
+                    alert(message);
+                };
+                
+                // Função para carregar informações de ambiente
+                window.loadEnvironmentInfo = async function() {
+                    console.log('Carregando informações de ambiente...');
+                    try {
+                        // Aqui você pode fazer chamadas reais para sua API
+                        const envElement = document.getElementById('env-environment');
+                        const rmElement = document.getElementById('env-local-rm');
+                        const urlElement = document.getElementById('env-current-url');
+                        const portsElement = document.getElementById('env-ports');
+                        
+                        if (envElement) envElement.textContent = 'Desenvolvimento';
+                        if (rmElement) rmElement.textContent = 'Não detectado';
+                        if (urlElement) urlElement.textContent = 'Não configurado';
+                        if (portsElement) portsElement.textContent = 'Verificando...';
+                        
+                        console.log('Informações de ambiente carregadas!');
+                    } catch (error) {
+                        console.error('Erro ao carregar informações de ambiente:', error);
+                    }
+                };
+                
+                // Função para mostrar status RM
+                window.showRMStatus = function() {
+                    console.log('Mostrando status RM');
+                    const message = `Status do RM Local:
+- Disponível: Não detectado
+- URL: Não configurado
+- Versão: Desconhecida
+- Última detecção: Nunca
+- Status: Em desenvolvimento`;
+                    alert(message);
+                };
+                
+                // Função para mostrar/esconder loading
+                window.showLoading = function(show = true) {
+                    const loadingContainer = document.getElementById('loading-container');
+                    if (loadingContainer) {
+                        loadingContainer.style.display = show ? 'block' : 'none';
+                    }
+                };
+                
+                // Função para mostrar alertas
+                window.showAlert = function(message, type = 'success') {
+                    const alertContainer = document.getElementById('alert-container');
+                    if (!alertContainer) return;
+                    
+                    const alertId = 'alert-' + Date.now();
+                    const alertHtml = `
+                        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+                            ${message}
+                            <button type="button" class="btn-close" onclick="closeAlert('${alertId}')"></button>
+                        </div>
+                    `;
+                    
+                    alertContainer.innerHTML = alertHtml;
+                    
+                    // Auto-remove success alerts after 5 seconds
+                    if (type === 'success') {
+                        setTimeout(() => closeAlert(alertId), 5000);
+                    }
+                };
+                
+                // Função para fechar alertas
+                window.closeAlert = function(alertId) {
+                    const alert = document.getElementById(alertId);
+                    if (alert) {
+                        alert.remove();
+                    }
+                };
+                
+                // Função para inicializar a tela (substitui o DOMContentLoaded)
+                window.initializeTestRequests = function() {
+                    console.log('Inicializando TestRequests...');
+                    
+                    // Aguarda um pouco para garantir que o DOM foi carregado
+                    setTimeout(() => {
+                        // Configura event listeners dos botões principais
+                        const redetectBtn = document.getElementById('redetectRMBtn');
+                        const statusBtn = document.getElementById('showRMStatusBtn');
+                        const selectDataServerBtn = document.getElementById('selectDataServerBtn');
+                        const showGetOptionsBtn = document.getElementById('showGetOptionsBtn');
+                        const showPostOptionsBtn = document.getElementById('showPostOptionsBtn');
+                        
+                        console.log('Configurando event listeners...', {
+                            redetectBtn: !!redetectBtn,
+                            statusBtn: !!statusBtn,
+                            selectDataServerBtn: !!selectDataServerBtn,
+                            showGetOptionsBtn: !!showGetOptionsBtn,
+                            showPostOptionsBtn: !!showPostOptionsBtn
+                        });
+                        
+                        if (redetectBtn) {
+                            redetectBtn.addEventListener('click', async () => {
+                                console.log('Clique em redetectRM');
+                                if (typeof redetectRM === 'function') {
+                                    await redetectRM();
+                                } else {
+                                    console.error('Função redetectRM não encontrada');
+                                }
+                            });
+                        }
+                        
+                        if (statusBtn) {
+                            statusBtn.addEventListener('click', () => {
+                                console.log('Clique em showRMStatus');
+                                if (typeof showRMStatus === 'function') {
+                                    showRMStatus();
+                                } else {
+                                    console.error('Função showRMStatus não encontrada');
+                                }
+                            });
+                        }
+                        
+                        if (selectDataServerBtn) {
+                            selectDataServerBtn.addEventListener('click', async () => {
+                                console.log('Clique em selectDataServer');
+                                if (typeof selectDataServer === 'function') {
+                                    await selectDataServer();
+                                } else {
+                                    console.error('Função selectDataServer não encontrada');
+                                }
+                            });
+                        }
+                        
+                        if (showGetOptionsBtn) {
+                            showGetOptionsBtn.addEventListener('click', () => {
+                                console.log('Clique em showGetOptions');
+                                if (typeof showGetOptions === 'function') {
+                                    showGetOptions();
+                                } else {
+                                    console.error('Função showGetOptions não encontrada');
+                                }
+                            });
+                        }
+                        
+                        if (showPostOptionsBtn) {
+                            showPostOptionsBtn.addEventListener('click', () => {
+                                console.log('Clique em showPostOptions');
+                                if (typeof showPostOptions === 'function') {
+                                    showPostOptions();
+                                } else {
+                                    console.error('Função showPostOptions não encontrada');
+                                }
+                            });
+                        }
+                        
+                        // Chama as funções de inicialização
+                        setTimeout(async () => {
+                            if (typeof loadEnvironmentInfo === 'function') {
+                                await loadEnvironmentInfo();
+                            }
+                            if (typeof redetectRM === 'function') {
+                                await redetectRM();
+                            }
+                        }, 100);
+                    }, 150);
+                };
+                
+                // Função para listar todos os DataServers (para debug)
+                window.listAllDataServers = async function() {
+                    try {
+                        const response = await fetch('/TestRequests/ListDataServers');
+                        const result = await response.json();
+                        console.log('DataServers disponíveis:', result);
+                        return result;
+                    } catch (error) {
+                        console.error('Erro ao listar DataServers:', error);
+                        return { success: false, error: error.message };
+                    }
+                };
+                
+                // Função para salvar credenciais do RM
+                window.saveRMCredentials = async function() {
+                    const username = document.getElementById('rmUsername')?.value;
+                    const password = document.getElementById('rmPassword')?.value;
+                    const codColigada = document.getElementById('rmCodColigada')?.value;
+                    
+                    if (!username || !password || !codColigada) {
+                        showAlert('Preencha todos os campos obrigatórios', 'warning');
+                        return;
+                    }
+                    
+                    try {
+                        // Salva as credenciais no localStorage
+                        const credentials = { username, password, codColigada };
+                        localStorage.setItem('rm-local-credentials', JSON.stringify(credentials));
+                        showAlert('Credenciais salvas com sucesso!', 'success');
+                        
+                        // Fecha o modal
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('rmCredentialsModal'));
+                        if (modal) modal.hide();
+                    } catch (error) {
+                        console.error('Erro ao salvar credenciais:', error);
+                        showAlert('Erro ao salvar credenciais: ' + error.message, 'danger');
+                    }
+                };
+                
+                // Função para testar credenciais do RM
+                window.testRMCredentials = async function() {
+                    const username = document.getElementById('rmUsername')?.value;
+                    const password = document.getElementById('rmPassword')?.value;
+                    const codColigada = document.getElementById('rmCodColigada')?.value;
+                    
+                    if (!username || !password || !codColigada) {
+                        showAlert('Preencha todos os campos para testar', 'warning');
+                        return;
+                    }
+                    
+                    const resultElement = document.getElementById('credentialsTestResult');
+                    if (resultElement) {
+                        resultElement.innerHTML = '<div class="text-info">Testando credenciais...</div>';
+                    }
+                    
+                    try {
+                        // Aqui você pode integrar com sua API de teste de credenciais
+                        setTimeout(() => {
+                            if (resultElement) {
+                                resultElement.innerHTML = '<div class="text-success">Credenciais válidas! (simulado)</div>';
+                            }
+                        }, 1500);
+                    } catch (error) {
+                        if (resultElement) {
+                            resultElement.innerHTML = `<div class="text-danger">Erro ao testar: ${error.message}</div>`;
+                        }
+                    }
+                };
+                
+                // Função para abrir modal de credenciais do RM
+                window.openRMCredentialsModal = function() {
+                    // Carrega credenciais salvas do localStorage
+                    const savedCredentials = localStorage.getItem('rm-local-credentials');
+                    if (savedCredentials) {
+                        try {
+                            const credentials = JSON.parse(savedCredentials);
+                            const usernameField = document.getElementById('rmUsername');
+                            const passwordField = document.getElementById('rmPassword');
+                            const codColigadaField = document.getElementById('rmCodColigada');
+                            
+                            if (usernameField) usernameField.value = credentials.username || '';
+                            if (passwordField) passwordField.value = credentials.password || '';
+                            if (codColigadaField) codColigadaField.value = credentials.codColigada || '1';
+                        } catch (e) {
+                            console.error('Erro ao carregar credenciais salvas:', e);
+                        }
+                    }
+                    
+                    // Abre o modal
+                    const modal = new bootstrap.Modal(document.getElementById('rmCredentialsModal'));
+                    modal.show();
+                };
+                
+                // Função para executar requisições customizadas
+                window.executeCustomRequest = async function() {
+                    const method = document.getElementById('requestMethod')?.value || 'GET';
+                    const endpoint = document.getElementById('customEndpoint')?.value;
+                    const body = document.getElementById('requestBody')?.value;
+                    const serverSelect = document.getElementById('serverSelect');
+                    
+                    if (!serverSelect?.value) {
+                        showAlert('Selecione um DataServer primeiro', 'warning');
+                        return;
+                    }
+                    
+                    if (!endpoint) {
+                        showAlert('Digite um endpoint para testar', 'warning');
+                        return;
+                    }
+                    
+                    const resultContainer = document.getElementById('customRequestResult');
+                    if (resultContainer) {
+                        resultContainer.innerHTML = '<div class="text-info">Executando requisição...</div>';
+                    }
+                    
+                    try {
+                        const requestData = {
+                            dataServerName: serverSelect.value,
+                            method: method,
+                            endpoint: endpoint,
+                            body: method !== 'GET' && body ? body : null
+                        };
+                        
+                        const response = await fetch('/TestRequests/ExecuteCustomRequest', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(requestData)
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (resultContainer) {
+                            if (result.success) {
+                                resultContainer.innerHTML = `
+                                    <div class="text-success mb-2">Requisição executada com sucesso!</div>
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between">
+                                            <span><strong>Resposta:</strong></span>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard(JSON.stringify(${JSON.stringify(result.data)}, null, 2))">Copiar</button>
+                                        </div>
+                                        <div class="card-body">
+                                            <pre><code>${JSON.stringify(result.data, null, 2)}</code></pre>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                resultContainer.innerHTML = `<div class="text-danger">Erro: ${result.error}</div>`;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Erro ao executar requisição:', error);
+                        if (resultContainer) {
+                            resultContainer.innerHTML = `<div class="text-danger">Erro: ${error.message}</div>`;
+                        }
+                    }
+                };
+                
+                // Função para copiar texto para área de transferência
+                window.copyToClipboard = function(text) {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            showAlert('Copiado para a área de transferência!', 'success');
+                        }).catch(err => {
+                            console.error('Erro ao copiar:', err);
+                            fallbackCopyTextToClipboard(text);
+                        });
+                    } else {
+                        fallbackCopyTextToClipboard(text);
+                    }
+                };
+                
+                // Função de fallback para copiar texto
+                window.fallbackCopyTextToClipboard = function(text) {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.top = "0";
+                    textArea.style.left = "0";
+                    textArea.style.position = "fixed";
+                    
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            showAlert('Copiado para a área de transferência!', 'success');
+                        } else {
+                            showAlert('Erro ao copiar texto', 'danger');
+                        }
+                    } catch (err) {
+                        console.error('Fallback: Erro ao copiar', err);
+                        showAlert('Erro ao copiar texto', 'danger');
+                    }
+                    
+                    document.body.removeChild(textArea);
+                };
+                
+                // Função para formatar JSON
+                window.formatJSON = function(jsonString) {
+                    try {
+                        const parsed = JSON.parse(jsonString);
+                        return JSON.stringify(parsed, null, 2);
+                    } catch (error) {
+                        return jsonString; // Retorna o original se não conseguir fazer parse
+                    }
+                };
+                
+                // Função para alternar modo de requisição (GET/POST)
+                window.toggleRequestMethod = function() {
+                    const methodSelect = document.getElementById('requestMethod');
+                    const bodyContainer = document.getElementById('requestBodyContainer');
+                    
+                    if (methodSelect && bodyContainer) {
+                        if (methodSelect.value === 'GET') {
+                            bodyContainer.style.display = 'none';
+                        } else {
+                            bodyContainer.style.display = 'block';
+                        }
+                    }
+                };
+                
+                // Event listener para mudança do método de requisição
+                window.setupRequestMethodListener = function() {
+                    const methodSelect = document.getElementById('requestMethod');
+                    if (methodSelect) {
+                        methodSelect.addEventListener('change', toggleRequestMethod);
+                        // Chama uma vez para configurar o estado inicial
+                        toggleRequestMethod();
+                    }
+                };
+                
+                console.log('Funções do TestRequests inicializadas!');
+            }
+        }
+        
+        // Instância global do gerenciador de abas
+        window.tabManager = new TabManager();
+        
+        // Configura auto-save do estado das abas
+        function setupAutoSave() {
+            // Auto-save a cada 10 segundos
+            setInterval(() => {
+                if (window.tabManager && window.tabManager.activeTabId) {
+                    window.tabManager.saveCurrentTabState();
+                }
+            }, 10000);
+            
+            // Auto-save quando o usuário interage com campos
+            document.addEventListener('input', (e) => {
+                if (document.body.classList.contains('tabs-active') && 
+                    (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) {
+                    // Debounce para evitar muitas chamadas
+                    clearTimeout(window.autoSaveTimeout);
+                    window.autoSaveTimeout = setTimeout(() => {
+                        if (window.tabManager && window.tabManager.activeTabId) {
+                            window.tabManager.saveCurrentTabState();
+                        }
+                    }, 1000);
+                }
+            });
+            
+            // Auto-save quando o usuário troca de aba (já está implementado no activateTab)
+            
+            // Auto-save antes de fechar a janela/aba do navegador
+            window.addEventListener('beforeunload', () => {
+                if (window.tabManager && window.tabManager.activeTabId) {
+                    window.tabManager.saveCurrentTabState();
+                }
+            });
+            
+            // Auto-save quando uma seção é mostrada/escondida (importante para o estado visual)
+            const observer = new MutationObserver((mutations) => {
+                let shouldSave = false;
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                        const element = mutation.target;
+                        if (element.id && (
+                            element.style.display !== mutation.oldValue ||
+                            window.getComputedStyle(element).display !== mutation.oldValue
+                        )) {
+                            shouldSave = true;
+                        }
+                    }
+                });
+                
+                if (shouldSave && document.body.classList.contains('tabs-active')) {
+                    clearTimeout(window.displayChangeTimeout);
+                    window.displayChangeTimeout = setTimeout(() => {
+                        if (window.tabManager && window.tabManager.activeTabId) {
+                            window.tabManager.saveCurrentTabState();
+                        }
+                    }, 500);
+                }
+            });
+            
+            // Observa mudanças no conteúdo das abas
+            const tabContent = document.getElementById('tabContent');
+            if (tabContent) {
+                observer.observe(tabContent, {
+                    attributes: true,
+                    subtree: true,
+                    attributeFilter: ['style']
+                });
+            }
+        }
+        
+        // Inicializa o auto-save
+        setupAutoSave();
+        
+        // Funções do menu
+        function showBuscarJsons() {
+            openTabFromMenu('Buscar JSONs', '/JsonViewer');
+        }
+
+        function showTesteRequests() {
+            // Redireciona diretamente para a tela de TestRequests
+            window.location.href = '/TestRequests';
+        }
+
+        function showBuscarDataServer() {
+            openTabFromMenu('Buscar DataServer', '/SearchDS');
+        }
+        
+        function showCompareJson() {
+            openTabFromMenu('Comparar JSON', '/CompareJson/Index');
+        }
+        
+        // Função para abrir conteúdo em abas
+        async function openTabFromMenu(title, url) {
+            try {
+                // Verifica se já existe um sistema de abas
+                if (!window.tabManager) {
+                    // Se não existe, redireciona normalmente ou inicializa o sistema
+                    console.log('Sistema de abas não encontrado, carregando página completa...');
+                    window.location.href = url;
+                    return;
+                }
+                
+                // Se existe o sistema de abas, carrega o conteúdo via AJAX
+                console.log(`Abrindo ${title} em nova aba...`);
+                
+                // Mostra loading
+                const loadingContent = `
+                    <div class="container mt-4">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                            <p class="mt-2">Carregando ${title}...</p>
+                        </div>
+                    </div>
+                `;
+                
+                const tabId = tabManager.createTab(title, loadingContent);
+                
+                // Carrega o conteúdo real
+                const response = await fetch(url);
+                if (response.ok) {
+                    const htmlContent = await response.text();
+                    
+                    // Extrai o conteúdo apropriado da resposta
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    
+                    let contentToLoad;
+                    
+                    // Para TestRequests, extrai o conteúdo do template
+                    if (url.includes('/TestRequests')) {
+                        const template = doc.getElementById('mainScreenTemplate');
+                        if (template) {
+                            contentToLoad = template.innerHTML;
+                            // Para TestRequests, não extrair/executar scripts externos, pois usa template interno
+                            console.log('TestRequests: usando template interno, pulando extração de scripts');
+                        } else {
+                            contentToLoad = doc.body.innerHTML;
+                        }
+                    } else {
+                        // Para outras páginas, usa o container principal e remove elementos desnecessários
+                        const container = doc.querySelector('.container, .container-fluid, .json-viewer-container');
+                        if (container) {
+                            // Clona o container para não modificar o original
+                            const clonedContainer = container.cloneNode(true);
+                            
+                            // Remove botões "Voltar ao Menu" que não fazem sentido no contexto de abas
+                            const backButtons = clonedContainer.querySelectorAll('a[href="/User/Menu"], a[href*="Menu"]');
+                            backButtons.forEach(btn => {
+                                if (btn.textContent.includes('Voltar') || btn.textContent.includes('Menu')) {
+                                    btn.remove();
+                                }
+                            });
+                            
+                            // Remove elementos de estilo que possam conflitar
+                            const styleElements = clonedContainer.querySelectorAll('style');
+                            styleElements.forEach(style => style.remove());
+                            
+                            contentToLoad = clonedContainer.innerHTML;
+                        } else {
+                            // Fallback para body completo
+                            const bodyClone = doc.body.cloneNode(true);
+                            
+                            // Remove elementos problemáticos
+                            const backButtons = bodyClone.querySelectorAll('a[href="/User/Menu"], a[href*="Menu"]');
+                            backButtons.forEach(btn => {
+                                if (btn.textContent.includes('Voltar') || btn.textContent.includes('Menu')) {
+                                    btn.remove();
+                                }
+                            });
+                            
+                            contentToLoad = bodyClone.innerHTML;
+                        }
+                    }
+                    
+                    // Extrai e executa scripts (apenas para páginas que não sejam TestRequests)
+                    const scripts = doc.querySelectorAll('script');
+                    const scriptTexts = [];
+                    
+                    if (!url.includes('/TestRequests')) {
+                        console.log(`Encontrados ${scripts.length} scripts na página ${url}`);
+                        
+                        scripts.forEach(script => {
+                            if (script.src) {
+                                // Scripts externos - carrega se ainda não foi carregado
+                                if (!document.querySelector(`script[src="${script.src}"]`)) {
+                                    const newScript = document.createElement('script');
+                                    newScript.src = script.src;
+                                    document.head.appendChild(newScript);
+                                    console.log(`Carregando script externo: ${script.src}`);
+                                }
+                            } else if (script.textContent.trim()) {
+                                // Scripts inline - coleta para execução
+                                scriptTexts.push(script.textContent);
+                                console.log(`Script inline encontrado (${script.textContent.length} chars)`);
+                            }
+                        });
+                        
+                        console.log(`Total de scripts inline para execução: ${scriptTexts.length}`);
+                    } else {
+                        console.log('TestRequests: pulando extração de scripts, usando inicialização própria');
+                    }
+                    
+                    // Atualiza o conteúdo da aba
+                    const tab = tabManager.tabs.get(tabId);
+                    if (tab) {
+                        tab.content = contentToLoad;
+                        tab.scripts = scriptTexts; // Armazena os scripts para reexecução
+                        if (tabManager.activeTabId === tabId) {
+                            document.getElementById('tabContent').innerHTML = contentToLoad;
+                            
+                            // Aguarda um tick antes de executar os scripts para garantir que o DOM foi atualizado
+                            // Mas só executa scripts se não for TestRequests
+                            if (!url.includes('/TestRequests')) {
+                                setTimeout(() => {
+                                    // Executa os scripts inline
+                                    scriptTexts.forEach(scriptText => {
+                                        try {
+                                            // Executa no escopo global
+                                            window.eval(scriptText);
+                                        } catch (e) {
+                                            console.error('Erro ao executar script:', e);
+                                        }
+                                    });
+                                }, 10);
+                            }
+                            
+                            tabManager.reinitializeTabEvents(tabId);
+                        }
+                    }
+                } else {
+                    // Em caso de erro, mostra mensagem de erro
+                    const errorContent = `
+                        <div class="container mt-4">
+                            <div class="alert alert-danger">
+                                <h4>Erro ao carregar ${title}</h4>
+                                <p>Não foi possível carregar o conteúdo. Tente novamente.</p>
+                                <button class="btn btn-primary" onclick="window.location.href='${url}'">
+                                    Abrir em página separada
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const tab = tabManager.tabs.get(tabId);
+                    if (tab) {
+                        tab.content = errorContent;
+                        if (tabManager.activeTabId === tabId) {
+                            document.getElementById('tabContent').innerHTML = errorContent;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao abrir aba:', error);
+                // Fallback para navegação normal
+                window.location.href = url;
+            }
+        }
+    </script>
+    <script>
+        async function searchExamples() {
+            const searchTerm = $("#dataServerSearch").val();
+            if (!searchTerm) {
+                alert("Digite um termo para busca");
+                return;
+            }
+
+            try {
+                // Remove o 'api' da URL
+                const response = await fetch(`/DataServer/search?term=${encodeURIComponent(searchTerm)}`);
+                console.log('Response status:', response.status); // Debug
+
+                const data = await response.json();
+                console.log('Response data:', data); // Debug
+
+                if (data.success) {
+                    const resultsHtml = data.data.map(ds => `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">${ds.name}</h6>
+                                <span class="badge bg-primary">${ds.routine}</span>
+                            </div>
+                            <p class="mb-2 small text-muted">${ds.description}</p>
+                            <div class="mb-3">
+                                <h6>GET Example:</h6>
+                                <pre class="bg-light p-2 rounded"><code>${JSON.stringify(ds.getExample, null, 2)}</code></pre>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick='copyToClipboard(${JSON.stringify(ds.getExample)})'>
+                                    Copiar GET
+                                </button>
+                            </div>
+                            <div>
+                                <h6>POST Example:</h6>
+                                <pre class="bg-light p-2 rounded"><code>${JSON.stringify(ds.postExample, null, 2)}</code></pre>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick='copyToClipboard(${JSON.stringify(ds.postExample)})'>
+                                    Copiar POST
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    $("#searchResults").html(resultsHtml || '<div class="alert alert-warning">Nenhum resultado encontrado</div>');
+                } else {
+                    $("#searchResults").html(`
+                        <div class="alert alert-warning">
+                            ${data.error || 'Nenhum resultado encontrado'}
+                        </div>
+                    `);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                $("#searchResults").html(`
+                    <div class="alert alert-danger">
+                        Erro ao buscar exemplos: ${error.message}
+                    </div>
+                `);
+            }
+        }
+
+        function copyToClipboard(jsonText) {
+            const textToCopy = typeof jsonText === 'string' ? jsonText : JSON.stringify(jsonText, null, 2);
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert("JSON copiado para a área de transferência!");
+                })
+                .catch(err => {
+                    console.error('Erro ao copiar:', err);
+                    alert("Erro ao copiar o JSON");
+                });
+        }
+
+        function alertEmDesenvolvimento() {
+            alert('Funcionalidade em desenvolvimento!');
+        }
+    </script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>

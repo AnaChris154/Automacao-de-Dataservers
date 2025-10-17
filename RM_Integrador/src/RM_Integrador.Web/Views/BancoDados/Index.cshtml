@@ -1,0 +1,134 @@
+@model IEnumerable<RM_Integrador.Shared.Models.DataServerInfo>
+@{
+    ViewData["Title"] = "Banco de Dados SQL";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Banco de Dados SQL - Sistema de Automação DataServer BH</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { 
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        .system-group {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: white;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        .dataserver-card {
+            height: 100%;
+            transition: transform 0.2s;
+        }
+        .dataserver-card:hover {
+            transform: translateY(-3px);
+        }
+        .keywords-badge {
+            margin: 0.2rem;
+            padding: 0.3rem 0.6rem;
+            background-color: #e9ecef;
+            color: #495057;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+        }
+        .system-title {
+            color: #0d6efd;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/Admin/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="main-title mb-0">Visualizar DataServers</h2>
+            <a href="/BancoDados/Exportar" class="btn btn-success">Exportar Dataservers (.csv)</a>
+        </div>
+        <div id="groupedResults"></div>
+    </div>  <!-- fechamento do container -->
+
+    <!-- Scripts (manter apenas uma vez, nesta ordem) -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function loadDataServers() {
+            try {
+                const response = await fetch('/BancoDados/GetAllGrouped');
+                const result = await response.json();
+
+                if (result.success) {
+                    displayGroupedResults(result.data);
+                } else {
+                    alert(`Erro: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao carregar DataServers');
+            }
+        }
+
+        function displayGroupedResults(data) {
+            const resultsDiv = document.getElementById('groupedResults');
+            const { groups, systemNames } = data;
+
+            const html = Object.entries(groups).map(([prefix, dataServers]) => `
+                <div class="system-group">
+                    <h4 class="system-title">${systemNames[prefix] || prefix}</h4>
+                    <div class="row">
+                        ${dataServers.map(ds => `
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card dataserver-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${ds.name}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${ds.routine}</h6>
+                                        <p class="card-text">${ds.description || 'Sem descrição'}</p>
+                                        
+                                        <!-- Adicionando seção de chaves primárias -->
+                                        ${ds.primaryKeys && ds.primaryKeys.length > 0 ? `
+                                            <div class="mt-2">
+                                                <strong>Chaves Primárias:</strong>
+                                                <div class="primary-keys-container">
+                                                    ${ds.primaryKeys.map(key => `
+                                                        <span class="badge bg-info me-1">${key}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+
+                                        <!-- Keywords existentes -->
+                                        ${ds.keywords && ds.keywords.length > 0 ? `
+                                            <div class="mt-2">
+                                                <strong>Keywords:</strong>
+                                                <div class="keywords-container">
+                                                    ${ds.keywords.map(keyword => `
+                                                        <span class="badge bg-secondary me-1">${keyword}</span>
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Carrega os dataservers quando a página é carregada
+        document.addEventListener('DOMContentLoaded', loadDataServers);
+    </script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "templateName": "Employee Data Example",
+  "description": "Template for retrieving employee information",
+  "dataServer": "EmployeeData",
+  "requestType": "GET",
+  "filter": "ACTIVE = 1",
+  "fields": [
+    "ID",
+    "NAME",
+    "DEPARTMENT",
+    "POSITION",
+    "HIRE_DATE"
+  ],
+  "example": {
+    "request": {
+      "filter": "ACTIVE = 1 AND DEPARTMENT = 'IT'",
+      "fields": ["ID", "NAME"]
+    },
+    "response": {
+      "success": true,
+      "data": [
+        {
+          "ID": "001",
+          "NAME": "John Doe"
+        }
+      ]
+    }
+  }
+}

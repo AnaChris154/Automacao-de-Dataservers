@@ -1,0 +1,114 @@
+@model IEnumerable<RM_Integrador.Shared.Models.DataServerInfo>
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "DataServers";
+
+    string FormatJson(string json)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(json)) return "";
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var jsonObj = JsonSerializer.Deserialize<JsonElement>(json);
+            return JsonSerializer.Serialize(jsonObj, options);
+        }
+        catch
+        {
+            return json;
+        }
+    }
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DataServers</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        /* Container do JSON */
+        .json-example {
+            height: 400px;           /* Altura fixa maior */
+            width: 600px;           /* Largura fixa maior */
+            overflow: auto;         /* Adiciona scroll em ambas direções */
+            background-color: #f8f9fa;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre;       /* Mantém a formatação original */
+            tab-size: 2;
+        }
+
+        /* Ajusta células da tabela */
+        .table td {
+            vertical-align: top;
+            padding: 20px;
+        }
+
+        /* Estiliza a coluna do JSON */
+        .table td:nth-child(4) {
+            width: 50%;            /* Usa 50% da largura da tabela */
+            max-width: none;       /* Remove limite máximo */
+        }
+
+        /* Melhora visualização do código */
+        pre code {
+            display: block;
+            color: #333;
+            background: none;
+            tab-size: 2;
+            -moz-tab-size: 2;
+        }
+
+        /* Realce ao passar o mouse */
+        .json-example:hover {
+            background-color: #fff;
+            border-color: #007bff;
+            box-shadow: 0 0 10px rgba(0,123,255,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DataServers</h1>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>@Html.DisplayNameFor(model => model.Name)</th>
+                    <th>@Html.DisplayNameFor(model => model.Routine)</th>
+                    <th>@Html.DisplayNameFor(model => model.Description)</th>
+                    <th>@Html.DisplayNameFor(model => model.GetExample)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@Html.DisplayFor(modelItem => item.Name)</td>
+                        <td>@Html.DisplayFor(modelItem => item.Routine)</td>
+                        <td>@Html.DisplayFor(modelItem => item.Description)</td>
+                        <td>
+                            <div class="json-container">
+                                <pre class="json-example"><code>@FormatJson(item.GetExample)</code></pre>
+                            </div>
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.Id">Details</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Scripts necessários -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>

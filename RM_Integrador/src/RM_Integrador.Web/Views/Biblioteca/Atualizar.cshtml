@@ -1,0 +1,499 @@
+@model RM_Integrador.Web.Models.AtualizarBibliotecaViewModel
+@inject Microsoft.AspNetCore.Mvc.ViewFeatures.IModelExpressionProvider ModelExpressionProvider
+
+@{
+    ViewData["Title"] = "Atualizar Biblioteca de Jsons";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .form-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .main-title {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-control {
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .btn {
+            border-radius: 25px;
+            font-weight: bold;
+            padding: 10px 30px;
+        }
+        .documentation-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .documentation-fields {
+            display: none;
+            margin-top: 15px;
+        }
+        .field-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .field-group > div {
+            flex: 1;
+        }
+        .field-icon {
+            margin-right: 8px;
+        }
+        .btn-documentation {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        .btn-documentation:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="/Admin/Menu" class="btn btn-outline-primary mb-3">← Voltar ao Menu</a>
+        <div class="form-card">
+            <h2 class="main-title mb-4">Atualizar Biblioteca de Jsons</h2>
+
+            @if (ViewBag.Sucesso != null)
+            {
+                <div class="alert alert-success">@ViewBag.Sucesso</div>
+            }
+
+            @if (ViewBag.Erro != null)
+            {
+                <div class="alert alert-danger">@ViewBag.Erro</div>
+            }
+
+            <form method="post" asp-action="Atualizar" enctype="multipart/form-data">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="Name" class="form-label">Nome do DataServer</label>
+                        <input type="text" class="form-control" asp-for="Name" id="Name" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="Routine" class="form-label">Rotina</label>
+                        <input type="text" class="form-control" asp-for="Routine" id="Routine" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="Description" class="form-label">Descrição</label>
+                    <textarea class="form-control" asp-for="Description" id="Description" rows="3" required></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="Keywords" class="form-label">Palavras-chave (separadas por vírgula)</label>
+                        <input type="text" class="form-control" asp-for="Keywords" id="Keywords" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label for="PrimaryKeys" class="form-label">Chaves Primárias (separadas por vírgula)</label>
+                        <input type="text" class="form-control" asp-for="PrimaryKeys" id="PrimaryKeys" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="getExampleArea" class="form-label">Exemplo GET</label>
+                    <div class="input-group">
+                        <textarea class="form-control" asp-for="GetExample" id="getExampleArea" rows="8" required></textarea>
+                        <div class="input-group-append" style="display: flex; flex-direction: column; gap: 5px; margin-left: 10px;">
+                            <button type="button" class="btn btn-secondary" onclick="buscarExemploGet()">Buscar GET</button>
+                            <button type="button" class="btn btn-info" onclick="buscarPrimeiroRegistro()">1º Registro</button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label for="getFilter" class="form-label">Filtro para GET (opcional)</label>
+                        <input type="text" class="form-control" id="getFilter" placeholder="Ex: CODCOLIGADA=1 AND CODIGO='12345'" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="PostExample" class="form-label">Exemplo POST</label>
+                    <textarea class="form-control" asp-for="PostExample" id="PostExample" rows="8" required></textarea>
+                </div>
+
+                <!-- Seção de Documentação -->
+                <div class="documentation-section">
+                    <h5><i class="fas fa-book field-icon"></i>Documentação e Dicas</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="WantToAddDocumentation" name="WantToAddDocumentation" value="true" onchange="toggleDocumentationFields()">
+                        <label class="form-check-label" for="WantToAddDocumentation">
+                            Adicionar dicas e documentação para este DataServer?
+                        </label>
+                        <small class="form-text text-light d-block">
+                            Marque esta opção se você deseja incluir dicas de uso, erros comuns e exemplos para ajudar outros usuários.
+                        </small>
+                    </div>
+
+                    <div id="documentationFields" class="documentation-fields">
+                        <div class="field-group">
+                            <div>
+                                <label for="CommonErrors" class="form-label">
+                                    <i class="fas fa-exclamation-triangle field-icon"></i>Erros Comuns
+                                </label>
+                                <textarea class="form-control" id="CommonErrors" name="CommonErrors" rows="3" placeholder="xxx"></textarea>
+                                <small class="form-text text-light">Descreva erros que geralmente ocorrem com este DataServer</small>
+                            </div>
+                            <div>
+                                <label for="ConsumptionTips" class="form-label">
+                                    <i class="fas fa-lightbulb field-icon"></i>Dicas de Consumo
+                                </label>
+                                <textarea class="form-control" id="ConsumptionTips" name="ConsumptionTips" rows="3" placeholder="xxx"></textarea>
+                                <small class="form-text text-light">Dicas para usar este DataServer de forma eficiente</small>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <div>
+                                <label for="FilterTips" class="form-label">
+                                    <i class="fas fa-filter field-icon"></i>Dicas de Filtros
+                                </label>
+                                <textarea class="form-control" id="FilterTips" name="FilterTips" rows="3" placeholder="xxx"></textarea>
+                                <small class="form-text text-light">Exemplos de filtros que funcionam bem</small>
+                            </div>
+                            <div>
+                                <label for="UsageExamples" class="form-label">
+                                    <i class="fas fa-code field-icon"></i>Exemplos de Uso
+                                </label>
+                                <textarea class="form-control" id="UsageExamples" name="UsageExamples" rows="3" placeholder="xxx"></textarea>
+                                <small class="form-text text-light">Casos de uso práticos deste DataServer</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Notes" class="form-label">
+                                <i class="fas fa-sticky-note field-icon"></i>Observações Gerais
+                            </label>
+                            <textarea class="form-control" id="Notes" name="Notes" rows="2" placeholder="Outras observações importantes..."></textarea>
+                            <small class="form-text text-light">Qualquer informação adicional relevante</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="button" class="btn btn-secondary me-3" onclick="salvarDadosTemporarios()">Salvar Rascunho</button>
+                    <button type="button" class="btn btn-warning me-3" onclick="editarDados()">Editar</button>
+                    <button type="submit" class="btn btn-success">Atualizar Banco</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleDocumentationFields() {
+            const checkbox = document.getElementById('WantToAddDocumentation');
+            const fields = document.getElementById('documentationFields');
+            
+            if (checkbox.checked) {
+                fields.style.display = 'block';
+                // Restaurar valores salvos se existirem
+                const saved = localStorage.getItem('dataServerRascunho');
+                if (saved) {
+                    const dados = JSON.parse(saved);
+                    document.getElementById('CommonErrors').value = dados.commonErrors || '';
+                    document.getElementById('ConsumptionTips').value = dados.consumptionTips || '';
+                    document.getElementById('FilterTips').value = dados.filterTips || '';
+                    document.getElementById('UsageExamples').value = dados.usageExamples || '';
+                    document.getElementById('Notes').value = dados.notes || '';
+                }
+            } else {
+                fields.style.display = 'none';
+                // Limpar os campos quando desmarcar
+                document.getElementById('CommonErrors').value = '';
+                document.getElementById('ConsumptionTips').value = '';
+                document.getElementById('FilterTips').value = '';
+                document.getElementById('UsageExamples').value = '';
+                document.getElementById('Notes').value = '';
+            }
+        }
+        
+        function buscarExemploGet() {
+            var dataServerName = document.getElementById('Name').value;
+            var filter = document.getElementById('getFilter').value;
+
+            if (!dataServerName) {
+                alert("Preencha o nome do DataServer primeiro.");
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("BuscarExemploGet", "Biblioteca")',
+                type: 'POST',
+                data: { dataServerName: dataServerName, filter: filter },
+                success: function (result) {
+                    if (result.success) {
+                        $('#getExampleArea').val(result.json);
+                    } else {
+                        alert("Erro ao buscar exemplo: " + result.error);
+                    }
+                }
+            });
+        }
+
+        function buscarPrimeiroRegistro() {
+            var dataServerName = document.getElementById('Name').value;
+
+            if (!dataServerName) {
+                alert("Preencha o nome do DataServer primeiro.");
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("BuscarPrimeiroRegistro", "Biblioteca")',
+                type: 'POST',
+                data: { dataServerName: dataServerName },
+                success: function (result) {
+                    if (result.success) {
+                        $('#getExampleArea').val(result.json);
+                    } else {
+                        alert("Erro ao buscar primeiro registro: " + result.error);
+                    }
+                }
+            });
+        }
+
+        function validarCampos() {
+            const fields = ['Name', 'Routine', 'Description', 'Keywords', 'PrimaryKeys', 'getExampleArea', 'PostExample'];
+            let isValid = true;
+            
+            fields.forEach(function(field) {
+                var value = $(`#${field}`).val();
+                if (!value || value.trim() === '') {
+                    isValid = false;
+                    $(`#${field}`).addClass('is-invalid');
+                } else {
+                    $(`#${field}`).removeClass('is-invalid');
+                }
+            });
+            
+            return isValid;
+        }
+
+        // Função para salvar dados temporariamente no localStorage
+        function salvarDadosTemporarios() {
+            const dados = {
+                name: $('#Name').val(),
+                routine: $('#Routine').val(),
+                description: $('#Description').val(),
+                keywords: $('#Keywords').val(),
+                primaryKeys: $('#PrimaryKeys').val(),
+                getExample: $('#getExampleArea').val(),
+                postExample: $('#PostExample').val(),
+                // Campos de documentação
+                wantToAddDocumentation: $('#WantToAddDocumentation').is(':checked'),
+                commonErrors: $('#CommonErrors').val(),
+                consumptionTips: $('#ConsumptionTips').val(),
+                filterTips: $('#FilterTips').val(),
+                usageExamples: $('#UsageExamples').val(),
+                notes: $('#Notes').val()
+            };
+
+            console.log('Debug - Salvando dados:', dados);
+            console.log('Debug - Checkbox marcado?', $('#WantToAddDocumentation').is(':checked'));
+            console.log('Debug - CommonErrors value:', $('#CommonErrors').val());
+
+            localStorage.setItem('dataServerRascunho', JSON.stringify(dados));
+
+            // Desabilita todos os campos após salvar
+            $('#Name').prop('readonly', true);
+            $('#Routine').prop('readonly', true);
+            $('#Description').prop('readonly', true);
+            $('#Keywords').prop('readonly', true);
+            $('#PrimaryKeys').prop('readonly', true);
+            $('#getExampleArea').prop('readonly', true);
+            $('#PostExample').prop('readonly', true);
+            // Campos de documentação
+            $('#WantToAddDocumentation').prop('disabled', true);
+            $('#CommonErrors').prop('readonly', true);
+            $('#ConsumptionTips').prop('readonly', true);
+            $('#FilterTips').prop('readonly', true);
+            $('#UsageExamples').prop('readonly', true);
+            $('#Notes').prop('readonly', true);
+
+            $('.form-control').addClass('bg-light');
+            $('.form-check-input').addClass('bg-light');
+            alert('Dados salvos temporariamente! Os campos foram bloqueados para edição.');
+        }
+
+        // Função para habilitar edição
+        function editarDados() {
+            $('#Name').prop('readonly', false);
+            $('#Routine').prop('readonly', false);
+            $('#Description').prop('readonly', false);
+            $('#Keywords').prop('readonly', false);
+            $('#PrimaryKeys').prop('readonly', false);
+            $('#getExampleArea').prop('readonly', false);
+            $('#PostExample').prop('readonly', false);
+            // Campos de documentação
+            $('#WantToAddDocumentation').prop('disabled', false);
+            $('#CommonErrors').prop('readonly', false);
+            $('#ConsumptionTips').prop('readonly', false);
+            $('#FilterTips').prop('readonly', false);
+            $('#UsageExamples').prop('readonly', false);
+            $('#Notes').prop('readonly', false);
+
+            $('.form-control').removeClass('bg-light');
+            $('.form-check-input').removeClass('bg-light');
+
+            const dadosSalvos = localStorage.getItem('dataServerRascunho');
+            if (dadosSalvos) {
+                const dados = JSON.parse(dadosSalvos);
+                $('#Name').val(dados.name);
+                $('#Routine').val(dados.routine);
+                $('#Description').val(dados.description);
+                $('#Keywords').val(dados.keywords);
+                $('#PrimaryKeys').val(dados.primaryKeys);
+                $('#getExampleArea').val(dados.getExample);
+                $('#PostExample').val(dados.postExample);
+                // Campos de documentação
+                $('#WantToAddDocumentation').prop('checked', dados.wantToAddDocumentation);
+                $('#CommonErrors').val(dados.commonErrors || '');
+                $('#ConsumptionTips').val(dados.consumptionTips || '');
+                $('#FilterTips').val(dados.filterTips || '');
+                $('#UsageExamples').val(dados.usageExamples || '');
+                $('#Notes').val(dados.notes || '');
+                
+                // Atualizar visibilidade dos campos de documentação
+                toggleDocumentationFields();
+                
+                alert('Dados carregados e campos liberados para edição!');
+            } else {
+                alert('Nenhum rascunho encontrado!');
+            }
+        }
+
+        // Função para confirmar envio
+        function confirmarEnvio() {
+            const campos = {
+                'Nome': $('#Name').val(),
+                'Rotina': $('#Routine').val(),
+                'Descrição': $('#Description').val(),
+                'Palavras-chave': $('#Keywords').val(),
+                'Chaves Primárias': $('#PrimaryKeys').val(),
+                'Exemplo GET': $('#getExampleArea').val(),
+                'Exemplo POST': $('#PostExample').val()
+            };
+
+            let camposVazios = [];
+            for (let [campo, valor] of Object.entries(campos)) {
+                if (!valor || valor.trim() === '') {
+                    camposVazios.push(campo);
+                }
+            }
+
+            if (camposVazios.length > 0) {
+                alert(`Os seguintes campos estão vazios:\n${camposVazios.join('\n')}\n\nDeseja continuar mesmo assim?`);
+                return confirm('Confirma o envio com campos vazios?');
+            }
+
+            return confirm('Confirma o envio dos dados para o banco?');
+        }
+
+        // Modificar o handler do submit do formulário
+        $('form').on('submit', function(e) {
+            e.preventDefault();
+            
+            if (!confirmarEnvio()) {
+                return false;
+            }
+
+            // Pega os dados salvos do localStorage
+            const dadosSalvos = localStorage.getItem('dataServerRascunho');
+            if (!dadosSalvos) {
+                alert('Por favor, salve os dados primeiro antes de enviar ao banco.');
+                return false;
+            }
+
+            const dados = JSON.parse(dadosSalvos);
+            const formData = new FormData();
+            
+            // Usa os dados salvos em vez dos valores dos campos
+            formData.append('Name', dados.name);
+            formData.append('Routine', dados.routine);
+            formData.append('Description', dados.description);
+            formData.append('Keywords', dados.keywords);
+            formData.append('PrimaryKeys', dados.primaryKeys);
+            formData.append('GetExample', dados.getExample);
+            formData.append('PostExample', dados.postExample);
+            
+            // Campos de documentação
+            console.log('Debug - WantToAddDocumentation:', dados.wantToAddDocumentation);
+            console.log('Debug - CommonErrors:', dados.commonErrors);
+            console.log('Debug - ConsumptionTips:', dados.consumptionTips);
+            
+            formData.append('WantToAddDocumentation', dados.wantToAddDocumentation.toString());
+            if (dados.wantToAddDocumentation === true) {
+                formData.append('CommonErrors', dados.commonErrors || '');
+                formData.append('ConsumptionTips', dados.consumptionTips || '');
+                formData.append('FilterTips', dados.filterTips || '');
+                formData.append('UsageExamples', dados.usageExamples || '');
+                formData.append('Notes', dados.notes || '');
+                console.log('Debug - Campos de documentação adicionados ao FormData');
+            } else {
+                console.log('Debug - WantToAddDocumentation é false, campos não adicionados');
+            }
+
+            // Debug dos valores
+            console.log('Enviando dados salvos:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+
+            $.ajax({
+                url: '@Url.Action("Atualizar", "Biblioteca")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        alert('Dados salvos com sucesso no banco!');
+                        localStorage.removeItem('dataServerRascunho');
+                        window.location.reload();
+                    } else {
+                        alert('Erro ao salvar: ' + (response.error || 'Erro desconhecido'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro:', error);
+                    alert('Erro ao salvar no banco. Verifique o console para mais detalhes.');
+                }
+            });
+        });
+
+        // Carregar dados salvos ao iniciar a página
+        $(document).ready(function() {
+            const dadosSalvos = localStorage.getItem('dataServerRascunho');
+            if (dadosSalvos) {
+                if (confirm('Existem dados salvos em rascunho. Deseja carregá-los?')) {
+                    editarDados();
+                }
+            }
+        });
+    </script>
+    <partial name="_AutoLogoutPartial" />
+</body>
+</html>
